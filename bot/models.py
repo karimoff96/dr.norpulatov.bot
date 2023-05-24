@@ -38,3 +38,5 @@ class Patient(models.Model):
 
     def __str__(self) -> str:
         return self.first_name
+class Appointment(models.Model):
+    pass
