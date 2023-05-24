@@ -13,14 +13,15 @@ class Doctor(models.Model):
     active = models.BooleanField(default=True)
 
 
-# Create your models here.
 class Patient(models.Model):
-    user_id = models.BigIntegerField(unique=True)
+    user_id = models.BigIntegerField()
     first_name = models.CharField(max_length=128, null=True, blank=True)
     last_name = models.CharField(max_length=128, null=True, blank=True)
     username = models.CharField(max_length=128, null=True, blank=True)
     week_day = models.CharField(max_length=128, blank=True, null=True)
     checkup_time = models.DateTimeField(default=timezone.now)
+    gender = models.CharField(max_length=50, null=True, blank=True)
+    age = models.IntegerField(default=0, null=True, blank=True)
     reason = models.TextField(blank=True, null=True)
     phone_number = models.CharField(max_length=128, null=True, blank=True)
     doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
