@@ -38,5 +38,6 @@ class Patient(models.Model):
 
     def __str__(self) -> str:
         return self.first_name
-class Appointment(models.Model):
-    pass
+# class Appointment(models.Model):
+#     doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
+#     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)

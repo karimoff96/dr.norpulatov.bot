@@ -5,13 +5,13 @@ from django.shortcuts import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Patient, Doctor
 from django.utils.translation import gettext_lazy as _
-
+from environs import Env
 # Create your views here.
+env = Env()
+env.read_env()
 
-CHANNEL = -1001979049558
-bot = telebot.TeleBot(
-    "5766441546:AAH8XwImaQhBngpA4xutYpm_MFI6ZjLkidE", parse_mode="HTML"
-)
+CHANNEL = env.str('CHANNEL')
+bot = telebot.TeleBot(env.str("BOT_TOKEN"), parse_mode="HTML")
 
 hideBoard = types.ReplyKeyboardRemove()
 
