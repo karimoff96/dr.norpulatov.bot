@@ -6,11 +6,12 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Patient, Doctor
 from django.utils.translation import gettext_lazy as _
 from environs import Env
+
 # Create your views here.
 env = Env()
 env.read_env()
 
-CHANNEL = env.str('CHANNEL')
+CHANNEL = env.str("CHANNEL")
 bot = telebot.TeleBot(env.str("BOT_TOKEN"), parse_mode="HTML")
 
 hideBoard = types.ReplyKeyboardRemove()
@@ -33,7 +34,7 @@ def start(message):
         text = str(_("Shifokor qabuliga yozilish"))
 
     else:
-        Patient.objects.create(user_id=message.from_user.id)
+        Patient.objects.create(user_id=message.from_user.id, first_name=message.from_user.first_name)
         text = str(
             _(
                 f"<i>Assalomu alaykum {message.from_user.first_name}.\n<b>shifokor qabuliga yozilish!</b></i>"
@@ -141,7 +142,6 @@ def process_phone_number(message):
     elif message.text == str(_("🛑Bekor qilish")):
         cancel(message)
     else:
-        # If the user didn't share the phone number, handle it accordingly
         bot.send_message(message.chat.id, str(_("Telefon raqam aniqlanmadi")))
 
 
