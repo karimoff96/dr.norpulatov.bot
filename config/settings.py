@@ -16,9 +16,9 @@ SECRET_KEY = env.str('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'norpolatov.uz', 'wwww.norpolatov.uz']
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
-
+CSRF_TRUSTED_ORIGINS = ['https://norpolatov.uz', 'https://www.norpolatov.uz']
 # Application definition
 
 INSTALLED_APPS = [
