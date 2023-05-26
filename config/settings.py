@@ -16,7 +16,7 @@ SECRET_KEY = env.str('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['13.53.111.231', 'localhost', '127.0.0.1', 'norpolatov.uz', 'http://norpolatov.uz', 'https://norpolatov.uz']
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 
 
 CSRF_TRUSTED_ORIGINS = ['https://norpolatov.uz', 'https://www.norpolatov.uz']
