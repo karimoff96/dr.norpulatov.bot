@@ -19,6 +19,6 @@ from django.urls import path
 from bot import views
 
 urlpatterns = [
-    path('', admin.site.urls),
     path('bot/', views.index, name='handler'),
+    path('', admin.site.urls),
 ]
