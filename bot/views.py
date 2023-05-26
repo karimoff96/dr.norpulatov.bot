@@ -226,6 +226,6 @@ def contact(message):
                         f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Familyasi:</b>  {user.last_name}\n<b>Telefon raqam:</b> {user.phone_number}\n<b>Shikoyat bayoni:</b>  {user.reason}\n"
                     )
                 )
-        # bot.send_message(CHANNEL, text)
+        bot.send_message(CHANNEL, text)
 
 
