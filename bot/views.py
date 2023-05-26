@@ -49,7 +49,7 @@ def start(message):
 
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn = types.KeyboardButton(str(_("Qabulga yozilish")))
-    btn1 = types.KeyboardButton(str(_("Yordam")))
+    btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
     markup.add(btn, btn1)
     bot.send_message(message.chat.id, text, reply_markup=markup)
 
@@ -59,8 +59,9 @@ def cancel(message):
     user = Patient.objects.get(user_id=message.from_user.id)
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn = types.KeyboardButton(str(_("Qabulga yozilish")))
-    btn1 = types.KeyboardButton(str(_("Yordam")))
+    btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
     markup.add(btn, btn1)
+    user.urgent=False
     user.step = 0
     user.save()
     bot.send_message(
@@ -75,35 +76,32 @@ def checkout(message):
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn = types.KeyboardButton(str(_("Qabulga yozilish")))
     btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
-    btn2 = types.KeyboardButton(str(_("Yordam")))
+    btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
     markup.add(btn, btn1, btn2)
     user = Patient.objects.get(user_id=message.from_user.id)
-    if len(message.from_user.username) > 0:
-        text = str(
-            _(
-                f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Familyasi:</b>  {user.last_name}\n<b>Profil:</b>  {user.username}\n<b>Telefon raqam:</b> {user.phone_number}\n<b>Shikoyat bayoni:</b>  {user.reason}\n"
-            )
-        )
+    if user.urgent == True:
+        print(1213121)
+        if len(message.from_user.username) > 0:
+            text = f"<u><b>‼️Tezkor qabul.\nFoydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Profil:</b>  {user.username}\n<b>Telefon raqam:</b>  {user.phone_number}"
+        else:
+            text = f"<u><b>‼️Tezkor qabul.\nFoydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Telefon raqam:</b>  {user.phone_number}"
     else:
-        text = str(
-            _(
-                f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Familyasi:</b>  {user.last_name}\n<b>Telefon raqam:</b> {user.phone_number}\n<b>Shikoyat bayoni:</b>  {user.reason}\n"
+        if len(message.from_user.username) > 0:
+            text = str(
+                _(
+                    f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Familyasi:</b>  {user.last_name}\n<b>Profil:</b>  {user.username}\n<b>Telefon raqam:</b> {user.phone_number}\n<b>Shikoyat bayoni:</b>  {user.reason}\n"
+                )
             )
-        )
+        else:
+            text = str(
+                _(
+                    f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Familyasi:</b>  {user.last_name}\n<b>Telefon raqam:</b> {user.phone_number}\n<b>Shikoyat bayoni:</b>  {user.reason}\n"
+                )
+            )
 
     bot.send_message(message.from_user.id, text, reply_markup=markup)
 
 
-@bot.message_handler(func=lambda message: message.text == str(_("Yordam")))
-def help(message):
-    bot.send_message(
-        message.from_user.id,
-        str(
-            _(
-                "Siz bu bot orqali shifokor qabuliga yozilishingiz mumkin!!",
-            )
-        ),
-    )
 @bot.message_handler(func=lambda message: message.text == str(_("Qabulga yozilish")))
 def register(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
@@ -112,11 +110,27 @@ def register(message):
     markup.add(btn1)
     bot_user.username = message.from_user.username
     bot_user.step = 1
+    bot_user.urgent=False
     bot_user.save()
     bot.send_message(
         message.chat.id, str(_("Ismingizni kiriting:")), reply_markup=markup
     )
 
+@bot.message_handler(func=lambda message: message.text == str(_("Tezkor Aloqa")))
+def first_aid(message):
+    text = """Agar sizda  bosh og'rig'i, qusish, isitma yoki ko’krak og’riqlari paydo bo'lsa, darhol tibbiy yordam talab qilinishi mumkin.\nQuyidagi belgilar sizda mavjud bo’lsa, tezkor yordam tugmasini bosing.\n\n📌Qattiq bo'yin yoki iyak og'rig'i.\n📌Chalkashish, fikrlarni o’chib ketishi\n📌Haddan tashqari uyquchanlik.\n📌Yurakning tez urishi yoki yurak atrofidagi noqulayliklar.\n📌Doimiy ko'ngil aynishi yoki qayt qilish.\n📌Nurga kuchli sezgirlik (fotofobiya).\n📌Tik turish yoki yurishga xalaqit beradigan beqarorlik (ataksiya yoki vertigo).\n📌Yangi ikki tomonlama ko'rish, loyqa ko'rish yoki ko'r dog'lar.\n📌Juda tez, qiyin nafas olish.\n📌Yangi va turli xil teri toshmasi yoki kuchli ko'karishlar.\n📌Bir yoki bir nechta bo'g'imlarda yangi shish, og'riq, qizarish yoki issiqlik.\n\nBizning hizmatlar faqat diagnos qoyish va konsultatsiya berishdan iborat. Agar sizga tezkor yordam kerak bo’lsa 103 ga qo’ng’iroq qiling."""
+    bot.send_message(message.from_user.id, text)
+    bot_user = Patient.objects.get(user_id=message.from_user.id)
+    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    btn1 = types.KeyboardButton(str(_("🛑Bekor qilish")))
+    markup.add(btn1)
+    bot_user.username = message.from_user.username
+    bot_user.step = 100
+    bot_user.urgent = True
+    bot_user.save()
+    bot.send_message(
+        message.chat.id, str(_("Ismingizni kiriting:")), reply_markup=markup
+    )
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
@@ -149,6 +163,22 @@ def echo_all(message):
             reply_markup=markup,
         )
 
+    elif len(message.text) > 0 and bot_user.step == 100 and bot_user.urgent == True:
+        bot_user.first_name = message.text
+        bot_user.step = 101
+        bot_user.save()
+        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+        markup.add(
+            types.KeyboardButton(
+                str(_("Telefon raqamni ulashish")), request_contact=True
+            )
+        )
+        bot.send_message(
+            message.chat.id,
+            str(_("Telefon raqamingizni kiriting:")),
+            reply_markup=markup,
+        )
+
 
 @bot.message_handler(content_types=["contact"])
 def contact(message):
@@ -163,7 +193,7 @@ def contact(message):
         markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
         btn = types.KeyboardButton(str(_("Qabulga yozilish")))
         btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
-        btn2 = types.KeyboardButton(str(_("Yordam")))
+        btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
         markup.add(btn, btn1, btn2)
         bot.send_message(
             message.chat.id, str(_(f"Telefon raqam qabul qilindi: {phone_number}"))
@@ -173,19 +203,29 @@ def contact(message):
             str(_("Shifokor qabuliga yozilish muvaffaqiyatli yakunlandi! ")),
             reply_markup=markup,
         )
+        if user.urgent == True:
+            if len(message.from_user.username) > 0:
+                text = f"<u><b>‼️Tezkor qabul.\nFoydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Profil:</b>  {user.username}\n<b>Telefon raqam:</b>  {user.phone_number}"
+            else:
+                text = f"<u><b>‼️Tezkor qabul.\nFoydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Telefon raqam:</b>  {user.phone_number}"
+            user.step=0
+            # user.urgent=False
+            user.save()
+            bot.send_message(message.from_user.id, 'Siz bilan tez orada bog`lanishadi!')
 
-        if len(message.from_user.username) > 0:
-            text = str(
-                _(
-                    f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Familyasi:</b>  {user.last_name}\n<b>Profil:</b>  {user.username}\n<b>Telefon raqam:</b> {user.phone_number}\n<b>Shikoyat bayoni:</b>  {user.reason}\n"
-                )
-            )
         else:
-            text = str(
-                _(
-                    f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Familyasi:</b>  {user.last_name}\n<b>Telefon raqam:</b> {user.phone_number}\n<b>Shikoyat bayoni:</b>  {user.reason}\n"
+            if len(message.from_user.username) > 0:
+                text = str(
+                    _(
+                        f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Familyasi:</b>  {user.last_name}\n<b>Profil:</b>  {user.username}\n<b>Telefon raqam:</b> {user.phone_number}\n<b>Shikoyat bayoni:</b>  {user.reason}\n"
+                    )
                 )
-            )
-        bot.send_message(CHANNEL, text)
-    else:
-        bot.send_message(message.chat.id, str(_("Telefon raqam aniqlanmadi")))
+            else:
+                text = str(
+                    _(
+                        f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {user.id}\n<b>Ismi:</b>  {user.first_name}\n<b>Familyasi:</b>  {user.last_name}\n<b>Telefon raqam:</b> {user.phone_number}\n<b>Shikoyat bayoni:</b>  {user.reason}\n"
+                    )
+                )
+        # bot.send_message(CHANNEL, text)
+
+

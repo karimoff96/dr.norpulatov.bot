@@ -39,6 +39,7 @@ class Patient(models.Model):
     language = models.CharField(default="uz", choices=LANGUAGE_CHOICES, max_length=10)
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
+    urgent = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
 
     def __str__(self) -> str:
