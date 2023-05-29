@@ -74,6 +74,7 @@ class Patient(models.Model):
     phone_number = models.CharField(max_length=128, blank=True)
     step = models.IntegerField(default=0, null=True, blank=True)
     language = models.CharField(default="uz", max_length=10)
+    busy_time = models.TimeField()
     active = models.BooleanField(default=False)
 
     def __str__(self) -> str:
