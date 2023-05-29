@@ -6,8 +6,8 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Patient, Appointment
 from django.utils.translation import gettext_lazy as _
 from environs import Env
-from django.utils import translation
 from django.utils.translation import activate
+from telebot.apihelper import ApiTelegramException
 
 # Create your views here.
 env = Env()
@@ -64,17 +64,17 @@ def cancel(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
     activate(bot_user.language)
     app = Appointment.objects.filter(patient=bot_user)
-        
+
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn = types.KeyboardButton(str(_("Qabulga yozilish")))
     btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
     markup.add(btn, btn1)
     bot_user.step = 0
     bot_user.save()
-    if len(app)>0:
+    if len(app) > 0:
         btn2 = types.KeyboardButton(str(_("Qabulni ko`rish")))
         markup.add(btn2)
-    
+
     bot.send_message(
         message.chat.id,
         str(_("<b>Shifokor qabuliga yozilish</b>")),
@@ -100,7 +100,6 @@ def checkout(message):
                 )
             )
         else:
-            
             text = str(
                 _(
                     f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  {app.patient.first_name}\n<b>Familyasi:</b>  {app.patient.last_name}\n<b>Telefon raqam:</b> {app.patient.phone_number}\n<b>Shikoyat bayoni:</b>  {app.complaint}\n"
@@ -218,11 +217,11 @@ def echo_all(message):
         )
         app = Appointment.objects.filter(patient=bot_user).last()
         if len(bot_user.username) > 0:
-                text = str(
-                    _(
-                        f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  {app.patient.first_name}\n<b>Familyasi:</b>  {app.patient.last_name}\n<b>Profil:</b>  @{app.patient.username}\n<b>Telefon raqam:</b> {app.patient.phone_number}\n<b>Shikoyat bayoni:</b>  {app.complaint}\n"
-                    )
+            text = str(
+                _(
+                    f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  {app.patient.first_name}\n<b>Familyasi:</b>  {app.patient.last_name}\n<b>Profil:</b>  @{app.patient.username}\n<b>Telefon raqam:</b> {app.patient.phone_number}\n<b>Shikoyat bayoni:</b>  {app.complaint}\n"
                 )
+            )
         else:
             text = str(
                 _(
@@ -255,7 +254,7 @@ def echo_all(message):
 def contact(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
     activate(bot_user.language)
-    
+
     if message.contact is not None and message.contact.phone_number:
         phone_number = message.contact.phone_number
         bot_user.phone_number = phone_number
@@ -266,7 +265,7 @@ def contact(message):
             btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
             markup.add(btn, btn1, btn2)
             Appointment.objects.create(patient=bot_user, urgent=True)
-            apps = Appointment.objects.filter(patient = bot_user).last()   
+            apps = Appointment.objects.filter(patient=bot_user).last()
             if len(message.from_user.username) > 0:
                 text = str(
                     _(
@@ -281,7 +280,13 @@ def contact(message):
                 )
             bot.send_message(CHANNEL, text)
             bot.send_message(
-                message.from_user.id, str(_("Habaringiz adminga yuborildi. Siz bilan tez orada bog`lanishadi!")), reply_markup=markup
+                message.from_user.id,
+                str(
+                    _(
+                        "Habaringiz adminga yuborildi. Siz bilan tez orada bog`lanishadi!"
+                    )
+                ),
+                reply_markup=markup,
             )
 
         else:
@@ -298,7 +303,6 @@ def contact(message):
                 str(_("Shikoyatingiz haqida batafsil ma`lumot bering:")),
                 reply_markup=markup,
             )
-       
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "en")
@@ -335,3 +339,24 @@ def cyrill(call):
     btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
     markup.add(btn, btn1)
     bot.send_message(call.from_user.id, text, reply_markup=markup)
+
+
+def cron_job(request):
+    users = Patient.objects.filter(active=False)
+    fail = 0
+    success = 0
+    for u in users:
+        try:
+            bot.send_message(
+                u.user_id,
+                "Hurmatli foydalanuvchi botdan to`liq ro`yhatdan o`tmaganingizcha biz siz haqingizda ma`limotga ega bo`la olmaymiz.\nIltimos qabulga yozilishni yakunlang!",
+            )
+            success += 1
+        except ApiTelegramException:
+            fail += 1
+    response = HttpResponse()
+    response.write(
+        f"<h1>Habar yuborishda yakunlandi: </h1>\nSuccess: {success}\nFail: {fail}"
+    )
+    bot.send_message(CHANNEL, f'To`liq ro`yhatdan o`tmagan foydalanuvchilarga "Registrtatsiyani yakunlash" to`grisidagi eslatma habar yuborish yakunlandi!\nNofaol foydalanuvchilar: {success}\nBotni blocklagan foydalanuvchilar: {fail}')
+    return response

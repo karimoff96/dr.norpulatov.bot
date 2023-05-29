@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Patient, Appointment
+from .models import Patient, Appointment, Doctor, MeetTime
 from django.contrib.auth.models import Group
 
 # Register your models here.
@@ -11,15 +11,26 @@ class PatientAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        queryset = queryset.filter(active=True)  # Filter the queryset to include only active patients
+        # queryset = queryset.filter(active=True)  # Filter the queryset to include only active patients
         return queryset
 
 admin.site.register(Patient, PatientAdmin)
+admin.site.register(Doctor)
+class MeetTimeAdmin(admin.ModelAdmin):
+    list_display = ('doctor', 'week_day', 'start_time','active')
+    
+admin.site.register(MeetTime)
 
 
 class AppointmentAdmin(admin.ModelAdmin):
-    list_display = ('patient', 'complaint', 'urgent', 'created_at')
-    list_filter = ('urgent',)
-    ordering = ('urgent', '-created_at')
+    list_display = ('patient', 'complaint', 'urgent', 'created_at', 'active')
+    list_editable = ('active',)
+    list_filter = ('urgent', 'active', 'created_at')
+    
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        # queryset = queryset.filter(active=True)
+        queryset = queryset.order_by('-urgent', '-created_at')
+        return queryset
 
 admin.site.register(Appointment, AppointmentAdmin)

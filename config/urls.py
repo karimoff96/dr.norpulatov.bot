@@ -20,5 +20,6 @@ from bot import views
 
 urlpatterns = [
     path('bot/', views.index, name='handler'),
+    path('cron/', views.cron_job),
     path('', admin.site.urls),
 ]

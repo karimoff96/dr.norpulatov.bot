@@ -21,7 +21,7 @@ DEBUG = True
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
 
-CSRF_TRUSTED_ORIGINS = ["https://norpolatov.uz", "https://www.norpolatov.uz", 'https://e72d-213-230-114-181.ngrok-free.app']
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS")
 # Application definition
 
 INSTALLED_APPS = [
