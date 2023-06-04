@@ -62,6 +62,19 @@ class DocWorkDay(models.Model):
 
     def __str__(self) -> str:
         return f'{self.doctor.first_name} {self.day.week_day}'
+    
+    def validate_unique(self, exclude=None):
+        queryset = type(self).objects.filter(doctor=self.doctor, day=self.day)
+        if self.pk is not None:
+            queryset = queryset.exclude(pk=self.pk)
+        if queryset.exists():
+            raise ValidationError(f"Doc work day with this Doctor and Day already exists. You better change the existing day`s times!")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['doctor', 'day'], name='unique_doctor_day')
+        ]
+        
 class Patient(models.Model):
     user_id = models.BigIntegerField(unique=True)
     first_name = models.CharField(max_length=256, blank=True)
@@ -69,7 +82,6 @@ class Patient(models.Model):
     username = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
-    urgent = models.BooleanField(default=False)
     gender = models.CharField(max_length=50, blank=True)
     age = models.IntegerField(default=0, blank=True)
     phone_number = models.CharField(max_length=128, blank=True)
@@ -92,9 +104,9 @@ class Appointment(models.Model):
         ("cancel", "Bekor qilindi"),
         ("unsuccessfull", "Bajarilmadi"),
     )
-    docworkday = models.ForeignKey(DocWorkDay, on_delete=models.CASCADE, blank=True)
-    time = models.ForeignKey(Time, on_delete=models.CASCADE, blank=True)
-    patient = models.ForeignKey(Patient, on_delete=models.SET_NULL, null=True)
+    docworkday = models.ForeignKey(DocWorkDay, on_delete=models.CASCADE, blank=True, null=True)
+    time = models.ForeignKey(Time, on_delete=models.CASCADE, blank=True, null=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     complaint = models.TextField(blank=True, null=True)
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
@@ -113,21 +125,3 @@ class Appointment(models.Model):
         verbose_name_plural = "Appointments"
 
 
-# class Appointment(models.Model):
-#     patient = models.ForeignKey(Patient, on_delete=models.SET_NULL, null=True)
-#     doctor = models.ForeignKey(Doctor, on_delete=models.SET_NULL, null=True)
-#     complaint = models.TextField(blank=True, null=True)
-#     created_at = models.DateField(auto_now_add=True)
-#     updated_at = models.DateField(auto_now=True)
-#     consultation_type = models.CharField(default="off", max_length=25)
-#     urgent = models.BooleanField(default=False)
-#     active = models.BooleanField(default=True)
-#     price = models.DecimalField(default=0, decimal_places=0, max_digits=8)
-#     card = models.CharField(max_length=250, blank=True)
-
-#     def __str__(self) -> str:
-#         return f"{self.patient.first_name} {self.patient.last_name}"
-
-#     class Meta:
-#         verbose_name = "Appointment"
-#         verbose_name_plural = "Appointments"
