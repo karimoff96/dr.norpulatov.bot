@@ -106,20 +106,20 @@ def checkout(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
     activate(bot_user.language)
     apps = Appointment.objects.filter(patient=bot_user)
+    bot.send_message(message.from_user.id, '<b><u>Sizning arizalaringiz</u></b>', reply_markup=markup)
     for app in apps:
         if app.urgent == True:
             text = str(
                 _(
-                    f"<u><b>‼️Tezkor qabul.\nFoydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  {app.patient.first_name}\n<b>Telefon raqam:</b>  {app.patient.phone_number}"
+                    f"<u><b>‼️Tezkor qabul arizasi.</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  <i>{app.patient.first_name}</i>\n<b>Telefon raqam:</b>  <i>{app.patient.phone_number}</i>\n<b>Shikoyat matni:</b> <i>Tezkor aloqa! {app.complaint}</i>\n<b>Yaratilgan vaqti:</b> <i>{app.created}</i>"
                 )
             )
         else:
             text = str(
                 _(
-                    f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  {app.patient.first_name}\n<b>Familyasi:</b>  {app.patient.last_name}\n<b>Telefon raqam:</b> {app.patient.phone_number}\n<b>Mas'ul shifokor:</b> {app.docworkday.doctor}\n<b>Qabul kuni:</b> {app.docworkday.day.week_day}\n<b>Qabul vaqti:</> {app.time}"
+                    f"<b>Tartib raqami:</b>  <i>{app.id}</i>\n<b>Ism:</b>  <i>{app.patient.first_name}</i>\n<b>Familya:</b>  <i>{app.patient.last_name}</i>\n<b>Telefon raqam:</b> <i>{app.patient.phone_number}</i>\n<b>Mas'ul shifokor:</b> <i>{app.docworkday.doctor}</i>\n<b>Qabul kuni:</b> <i>{app.docworkday.day.week_day}</i>\n<b>Qabul vaqti:</> <i>{app.time}</i>\n<b>Yaratilgan vaqti:</b> <i>{app.created}</i>"
                 )
             )
-
         bot.send_message(message.from_user.id, text, reply_markup=markup)
 
 
@@ -404,9 +404,11 @@ def handle_callback_query(call):
                 break
     if len(row_buttons) == 1:
         markup.add(row_buttons[0])
+        print(*row_buttons)
     elif len(row_buttons)== 0:
         text = '<i>Shifokorning qabul qilish vaqtlari mavjud emas</i>'
     else:
+        print(3)
         text = f"<i>{Doctor.objects.get(id=doc_id).about}</i>"
     back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
     markup.add(back)
@@ -414,7 +416,6 @@ def handle_callback_query(call):
     bot.send_message(
         call.from_user.id, text, reply_markup=markup
     )
-
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("day|"))
 def handle_callback_query(call):
@@ -463,7 +464,8 @@ def handle_callback_query(call):
 
     patient = Patient.objects.filter(user_id=call.from_user.id)[0]
 
-    Appointment.objects.create(patient=patient, docworkday=weekday, time=time)
+    app=Appointment.objects.create(patient=patient, docworkday=weekday, time=time)
+    bot.send_message(CHANNEL, f"<b>Shifokor qabuliga yozilgan be'mor ma'lumotlari:\nAriza tartib raqami: <i>{app.id}</i>\nIsmi: <i>{patient.first_name}</i>\nFamiliyasi: <i>{patient.last_name}</i>\n{'Telegram: {patient.username}' if patient.username else ''}Mas'ul shifokor: <i>{weekday.doctor.first_name}</i>\nQabul kuni: <i>{weekday.day.week_day}</i>\nQabul vaqti: <i>{time}</i></b>")
     text = f"<b>Siz <i>{weekday.day.week_day}</i> kuni\nSoat <i>{time}</i> da \nDoktor <i>{weekday.doctor.first_name}</i> qabuliga ro`yhatga olindingiz</b>"
     markup = types.ReplyKeyboardMarkup(
         row_width=2, resize_keyboard=True, one_time_keyboard=True

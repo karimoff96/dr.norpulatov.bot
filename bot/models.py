@@ -25,8 +25,8 @@ class WeekDay(models.Model):
 class Time(models.Model):
     start_time = models.TimeField(default=datetime.now().strftime("%H:%M"), unique=True)
     end_time = models.TimeField(null=True, blank=True)
-    created_at = models.DateField(auto_now_add=True)
-    updated_at = models.DateField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     active = models.BooleanField(default=True)
 
     def __str__(self) -> str:
@@ -39,8 +39,8 @@ class Doctor(models.Model):
     about = models.TextField(blank=True, null=True)
     phone_number = models.CharField(max_length=128, blank=True)
     available = models.BooleanField(default=True)
-    created_at = models.DateField(auto_now_add=True)
-    updated_at = models.DateField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     active = models.BooleanField(default=True)
 
     def __str__(self) -> str:
@@ -57,8 +57,8 @@ class DocWorkDay(models.Model):
     day = models.ForeignKey(WeekDay, on_delete=models.CASCADE)
     times = models.ManyToManyField(Time)
     active = models.BooleanField(default=False)
-    created_at = models.DateField(auto_now_add=True)
-    updated_at = models.DateField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         return f'{self.doctor.first_name} {self.day.week_day}'
@@ -80,8 +80,8 @@ class Patient(models.Model):
     first_name = models.CharField(max_length=256, blank=True)
     last_name = models.CharField(max_length=100, blank=True)
     username = models.CharField(max_length=256, blank=True)
-    created_at = models.DateField(auto_now_add=True)
-    updated_at = models.DateField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     gender = models.CharField(max_length=50, blank=True)
     age = models.IntegerField(default=0, blank=True)
     phone_number = models.CharField(max_length=128, blank=True)
@@ -110,8 +110,8 @@ class Appointment(models.Model):
     time = models.ForeignKey(Time, on_delete=models.CASCADE, blank=True, null=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     complaint = models.TextField(blank=True, null=True)
-    created_at = models.DateField(auto_now_add=True)
-    updated_at = models.DateField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     consultation_type = models.CharField(default="off", max_length=25)
     urgent = models.BooleanField(default=False)
     active = models.BooleanField(default=True)
@@ -121,7 +121,13 @@ class Appointment(models.Model):
 
     def __str__(self) -> str:
         return f"{self.patient.first_name} {self.patient.last_name}"
-
+    
+    @property
+    def created(self):
+        return (self.created_at+timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
+    @property
+    def updated(self):
+        return (self.updated_at+timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
     class Meta:
         verbose_name = "Appointment"
         verbose_name_plural = "Appointments"
