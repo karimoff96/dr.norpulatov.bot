@@ -1,9 +1,9 @@
-from django.db import models
-from django.utils import timezone
-from datetime import datetime
-from django.db.models.signals import post_save
+from datetime import datetime, timedelta
+
 from django.core.exceptions import ValidationError
-from datetime import timedelta
+from django.db import models
+from django.db.models.signals import post_save
+from django.utils import timezone
 
 
 class WeekDay(models.Model):
@@ -88,6 +88,8 @@ class Patient(models.Model):
     step = models.IntegerField(default=0, null=True, blank=True)
     language = models.CharField(default="uz", max_length=10)
     active = models.BooleanField(default=False)
+    time = models.TimeField(null=True, blank=True)
+
 
     def __str__(self) -> str:
         return f"{self.first_name}"

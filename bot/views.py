@@ -1,13 +1,13 @@
-from django.shortcuts import render
-from telebot import types
 import telebot
 from django.shortcuts import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import Patient, Appointment, Doctor, DocWorkDay, WeekDay, Time
-from django.utils.translation import gettext_lazy as _
-from environs import Env
 from django.utils.translation import activate
+from django.utils.translation import gettext_lazy as _
+from django.views.decorators.csrf import csrf_exempt
+from environs import Env
+from telebot import types
 from telebot.apihelper import ApiTelegramException
+
+from .models import Appointment, Doctor, DocWorkDay, Patient, Time
 
 # Create your views here.
 env = Env()
@@ -116,7 +116,7 @@ def checkout(message):
         else:
             text = str(
                 _(
-                    f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  {app.patient.first_name}\n<b>Familyasi:</b>  {app.patient.last_name}\n<b>Telefon raqam:</b> {app.patient.phone_number}\n<b>Shikoyat bayoni:</b>  {app.complaint}\n"
+                    f"<u><b>Foydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  {app.patient.first_name}\n<b>Familyasi:</b>  {app.patient.last_name}\n<b>Telefon raqam:</b> {app.patient.phone_number}\n<b>Mas'ul shifokor:</b> {app.docworkday.doctor}\n<b>Qabul kuni:</b> {app.docworkday.day.week_day}\n<b>Qabul vaqti:</> {app.time}"
                 )
             )
 
@@ -228,7 +228,7 @@ def make_complaint(message):
 def change_complaint(message):
     global extra_datas
     bot_user = Patient.objects.get(user_id=message.from_user.id)
-    extra_datas[message.from_user.id]['complaint']=message.text
+    extra_datas[message.from_user.id]["complaint"] = message.text
     activate(bot_user.language)
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn = types.KeyboardButton(str(_("Tasdiqlash")))
@@ -248,7 +248,9 @@ def confirm(message):
     global extra_datas
     patient = Patient.objects.filter(user_id=message.from_user.id)[0]
     Appointment.objects.create(
-        patient=patient, complaint=extra_datas[message.from_user.id]['complaint'], urgent=True
+        patient=patient,
+        complaint=extra_datas[message.from_user.id]["complaint"],
+        urgent=True,
     )
 
     apps = Appointment.objects.filter(patient=patient)
@@ -280,6 +282,8 @@ def confirm(message):
 
 @bot.message_handler(func=lambda message: message.text == str(_("Qabulga yozilish")))
 def make_appointment(message):
+    global extra_datas
+    extra_datas[message.from_user.id] = {}
     bot_user = Patient.objects.get(user_id=message.from_user.id)
     activate(bot_user.language)
     doctors = Doctor.objects.filter(active=True)
@@ -302,7 +306,7 @@ def make_appointment(message):
 
     bot.send_message(
         message.chat.id,
-        str(_("Shiforkorni tanlang: Shifokor haqida ma`lumot....")),
+        str(_("Bu yerga Shifoxona yoki servis xizmat yurlari haqida qisqacha malumot yozilishi mumkin")),
         reply_markup=markup,
     )
 
@@ -334,7 +338,7 @@ def echo_all(message):
 
     elif bot_user.step == 200 and len(message.text) > 0:
         global extra_datas
-        extra_datas[message.from_user.id]['complaint']=message.text
+        extra_datas[message.from_user.id]["complaint"] = message.text
         bot_user = Patient.objects.get(user_id=message.from_user.id)
         activate(bot_user.language)
         bot_user.save()
@@ -360,38 +364,6 @@ def contact(message):
     if message.contact is not None and message.contact.phone_number:
         phone_number = message.contact.phone_number
         bot_user.phone_number = phone_number
-        # if bot_user.step == 101:
-        #     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-        #     btn = types.KeyboardButton(str(_("Qabulga yozilish")))
-        #     btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
-        #     btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-        #     markup.add(btn, btn1, btn2)
-        #     Appointment.objects.create(patient=bot_user, urgent=True)
-        #     apps = Appointment.objects.filter(patient=bot_user).last()
-        #     if len(message.from_user.username) > 0:
-        #         text = str(
-        #             _(
-        #                 f"<u><b>‼️Tezkor qabul.\nFoydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {apps.id}\n<b>Ismi:</b>  {apps.patient.first_name}\n<b>Profil:</b>  @{apps.patient.username}\n<b>Telefon raqam:</b>  {apps.patient.phone_number}"
-        #             )
-        #         )
-        #     else:
-        #         text = str(
-        #             _(
-        #                 f"<u><b>‼️Tezkor qabul.\nFoydalanuvchi ma`lumotlari:</b></u>\n<b>Tartib raqami:</b>  {apps.id}\n<b>Ismi:</b>  {apps.patient.first_name}\n<b>Telefon raqam:</b>  {apps.patient.phone_number}"
-        #             )
-        #         )
-        #     bot.send_message(CHANNEL, text)
-        #     bot.send_message(
-        #         message.from_user.id,
-        #         str(
-        #             _(
-        #                 "Habaringiz adminga yuborildi. Siz bilan tez orada bog`lanishadi!"
-        #             )
-        #         ),
-        #         reply_markup=markup,
-        #     )
-
-        # else:
         bot_user.step = 3
         bot_user.active = True
         bot_user.save()
@@ -415,25 +387,33 @@ def contact(message):
 def handle_callback_query(call):
     global extra_datas
     doc_id = call.data.split("|")[1]
-    extra_datas[call.from_user.id]['doctor_id']=doc_id
+    extra_datas[call.from_user.id]["doctor_id"] = doc_id
     docworkdays = DocWorkDay.objects.filter(doctor__pk=doc_id)
     markup = types.InlineKeyboardMarkup(row_width=2)
     row_buttons = []
     for docworkday in docworkdays:
-        button = types.InlineKeyboardButton(
-            docworkday.day.week_day, callback_data=f"day|{docworkday.id}"
-        )
-        row_buttons.append(button)
-        if len(row_buttons) == 2:
-            markup.add(*row_buttons)
-            row_buttons = []
+        times = docworkday.times.all()
+        for time in times:
+            if not Appointment.objects.filter(docworkday=docworkday, time=time).exists():
+                button = types.InlineKeyboardButton(
+                    docworkday.day.week_day, callback_data=f"day|{docworkday.id}"
+                )
+                row_buttons.append(button)
+                if len(row_buttons) == 2:
+                    markup.add(*row_buttons)
+                break
     if len(row_buttons) == 1:
         markup.add(row_buttons[0])
-
+    elif len(row_buttons)== 0:
+        text = '<i>Shifokorning qabul qilish vaqtlari mavjud emas</i>'
+    else:
+        text = f"<i>{Doctor.objects.get(id=doc_id).about}</i>"
     back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
     markup.add(back)
     bot.delete_message(call.from_user.id, message_id=call.message.message_id)
-    bot.send_message(call.from_user.id, "Hafta kunini tanlang", reply_markup=markup)
+    bot.send_message(
+        call.from_user.id, text, reply_markup=markup
+    )
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("day|"))
@@ -444,6 +424,8 @@ def handle_callback_query(call):
     markup = types.InlineKeyboardMarkup(row_width=2)
     row_buttons = []
     for time in times:
+        if Appointment.objects.filter(docworkday_id=day_id, time=time).exists():
+            continue
         button = types.InlineKeyboardButton(
             time.start_time.strftime("%H:%M"), callback_data=f"time|{time.id}|{day_id}"
         )
@@ -458,43 +440,31 @@ def handle_callback_query(call):
     bot.delete_message(call.from_user.id, message_id=call.message.message_id)
 
     bot.send_message(
-        call.from_user.id, "Mavjud vaqtlardan birini tanlang", reply_markup=markup
+        call.from_user.id,
+        "<i>Mavjud vaqtlardan birini tanlang</i>",
+        reply_markup=markup,
     )
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("time|"))
 def handle_callback_query(call):
     global extra_datas
-    time_id = call.data.split("|")[1]
-    day_id = call.data.split("|")[2]
-    extra_datas[call.from_user.id]['time_id']=time_id
-    extra_datas[call.from_user.id]['day_id']=day_id
-
-    existing_times = DocWorkDay.objects.filter(doctor__pk=extra_datas[call.from_user.id]['doc_id']).filter(day_id=day_id)
-    
-    weekday = DocWorkDay.objects.filter(pk=day_id).first()
-    times: list[Time] = weekday.times.all()
+    extra_datas[call.from_user.id]["time_id"] = call.data.split("|")[1]
+    extra_datas[call.from_user.id]["day_id"] = int(call.data.split("|")[2])
+    weekday = DocWorkDay.objects.filter(
+        pk=extra_datas[call.from_user.id]["day_id"]
+    ).first()
     markup = types.InlineKeyboardMarkup(row_width=2)
-    row_buttons = []
-    for time in times:
-        button = types.InlineKeyboardButton(
-            time.start_time.strftime("%H:%M"), callback_data=f"time|{time.id}{day_id}"
-        )
-        row_buttons.append(button)
-        if len(row_buttons) == 2:
-            markup.add(*row_buttons)
-            row_buttons = []
-    if len(row_buttons) == 1:
-        markup.add(row_buttons[0])
+
     back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
     markup.add(back)
     bot.delete_message(call.from_user.id, message_id=call.message.message_id)
-    time = Time.objects.filter(id=time_id)[0]
+    time = Time.objects.filter(id=extra_datas[call.from_user.id]["time_id"])[0]
 
     patient = Patient.objects.filter(user_id=call.from_user.id)[0]
 
     Appointment.objects.create(patient=patient, docworkday=weekday, time=time)
-    text = f"Siz {weekday.day.week_day} kuni\n soat {time} da \ndoktor {weekday.doctor.first_name} qabuliga ro`yhatga olindingiz"
+    text = f"<b>Siz <i>{weekday.day.week_day}</i> kuni\nSoat <i>{time}</i> da \nDoktor <i>{weekday.doctor.first_name}</i> qabuliga ro`yhatga olindingiz</b>"
     markup = types.ReplyKeyboardMarkup(
         row_width=2, resize_keyboard=True, one_time_keyboard=True
     )
@@ -513,12 +483,11 @@ def latin(call):
     activate(user.language)
     text = str(
         _(
-            f"<i>Assalomu alaykum {call.from_user.first_name}.\n<b>Bizning xizmatlardan foydalanish uchun avval ro`yhatdan o`ting!</b></i>"
+            f"<b>Assalomu alaykum <i>{call.from_user.first_name}</i>.\nBizning xizmatlardan foydalanish uchun avval ro`yhatdan o`ting!</b>"
         )
     )
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn = types.KeyboardButton(str(_("Ro`yhatdan o`tish")))
-    # btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
     markup.add(btn)
     bot.send_message(call.from_user.id, text, reply_markup=markup)
 
@@ -535,7 +504,7 @@ def back(call):
     if Appointment.objects.filter(patient__user_id=call.from_user.id):
         btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
         markup.add(btn1)
-    bot.send_message(call.from_user.id, "Bosh menu", reply_markup=markup)
+    bot.send_message(call.from_user.id, "<b>Bosh menu</b>", reply_markup=markup)
 
 
 def cron_job(request):
@@ -546,7 +515,7 @@ def cron_job(request):
         try:
             bot.send_message(
                 u.user_id,
-                "Hurmatli foydalanuvchi botdan to`liq ro`yhatdan o`tmaganingizcha biz siz haqingizda ma`limotga ega bo`la olmaymiz.\nIltimos qabulga yozilishni yakunlang!",
+                "<b>Hurmatli foydalanuvchi botdan to`liq ro`yhatdan o`tmaganingizcha biz siz haqingizda ma`limotga ega bo`la olmaymiz.\nIltimos qabulga yozilishni yakunlang!</b>",
             )
             success += 1
         except ApiTelegramException:
@@ -557,6 +526,6 @@ def cron_job(request):
     )
     bot.send_message(
         CHANNEL,
-        f'To`liq ro`yhatdan o`tmagan foydalanuvchilarga "Registrtatsiyani yakunlash" to`grisidagi eslatma habar yuborish yakunlandi!\nNofaol foydalanuvchilar: {success}\nBotni blocklagan foydalanuvchilar: {fail}',
+        f'<b>To`liq ro`yhatdan o`tmagan foydalanuvchilarga "Registrtatsiyani yakunlash" to`grisidagi eslatma habar yuborish yakunlandi!</b>\n<b>Nofaol foydalanuvchilar:</b> <i>{success}</i>\n<b>Botni blocklagan foydalanuvchilar:</b> <i>{fail}</i>',
     )
     return response

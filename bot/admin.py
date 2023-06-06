@@ -1,6 +1,7 @@
 from django.contrib import admin
-from .models import Patient, Appointment, Doctor, Time, WeekDay, DocWorkDay
 from django.contrib.auth.models import Group
+
+from .models import Appointment, Doctor, DocWorkDay, Patient, Time, WeekDay
 
 # Register your models here.
 admin.site.unregister(Group)
