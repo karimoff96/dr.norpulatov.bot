@@ -113,7 +113,7 @@ def checkout(message):
         if app.urgent == True:
             text = str(
                 _(
-                    f"<u><b>‼️Tezkor qabul arizasi.</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  <i>{app.patient.first_name}</i>\n<b>Telefon raqam:</b>  <i>{app.patient.phone_number}</i>\n{f'Telegram: @{app.patient.username}' if app.patient.username else ''}\n<b>Shikoyat matni:</b> <i>Tezkor aloqa! {app.complaint}</i>\n<b>Yaratilgan vaqti:</b> <i>{app.created}</i>"
+                    f"<u><b>‼️Tezkor qabul arizasi.</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  <i>{app.patient.first_name}</i>\n<b>Familiyasi:</b> <i>{app.patient.last_name}</i>\n<b>Telefon raqam:</b>  <i>{app.patient.phone_number}</i>\n{f'<b>Telegram:</b> <i>@{app.patient.username}</i>' if app.patient.username else ''}\n<b>Shikoyat matni:</b> <i>Tezkor aloqa! {app.complaint}</i>\n<b>Yaratilgan vaqti:</b> <i>{app.created}</i>"
                 )
             )
         else:
@@ -222,7 +222,9 @@ def make_complaint(message):
     btn2 = types.KeyboardButton(str(_("🛑Bekor qilish")))
     markup.add(btn2)
     bot.send_message(
-        message.from_user.id, str(_("<i>Shikoyat matnini kiriting:</i>")), reply_markup=markup
+        message.from_user.id,
+        str(_("<i>Shikoyat matnini kiriting:</i>")),
+        reply_markup=markup,
     )
 
 
@@ -251,8 +253,12 @@ def change_complaint(message):
 def confirm(message):
     global extra_datas
     patient = Patient.objects.filter(user_id=message.from_user.id)[0]
-    complaint = extra_datas[message.from_user.id]['complaint'] if 'complaint' in extra_datas else ''
-    app=Appointment.objects.create(
+    complaint = (
+        extra_datas[message.from_user.id]["complaint"]
+        if "complaint" in extra_datas
+        else ""
+    )
+    app = Appointment.objects.create(
         patient=patient,
         complaint=complaint,
         urgent=True,
@@ -279,11 +285,10 @@ def confirm(message):
         reply_markup=markup,
     )
     text = str(
-            _(
-                f"<b>Tezkor ko`rik uchun ariza topshiruvchi be`mor ma`lumotlari:\nIsmi:</b> <i>{patient.first_name}</i>\n<b>Familyasi:</b> <i>{patient.last_name}</i>\n<b>Telefon raqami:</b> <i>{patient.phone_number}</i>\n<b>Qo`shimcha ma`lumot:</b> <i>Tezkor aloqa! {complaint}</i>\n<b>Qabul vaqti:</b> <i>{app.created}</i>"
-            )
+        _(
+            f"<b>Tezkor ko`rik uchun ariza topshiruvchi be`mor ma`lumotlari:\nIsmi:</b> <i>{patient.first_name}</i>\n<b>Familyasi:</b> <i>{patient.last_name}</i>\n{f'Telegram: @{app.patient.username}' if app.patient.username else ''}\n<b>Telefon raqami:</b> <i>{patient.phone_number}</i>\n<b>Qo`shimcha ma`lumot:</b> <i>Tezkor aloqa! {complaint}</i>\n<b>Qabul vaqti:</b> <i>{app.created}</i>"
         )
-    print(app.created)
+    )
     bot.send_message(CHANNEL, text)
     bot.send_message(
         message.chat.id,
@@ -511,6 +516,7 @@ def latin(call):
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn = types.KeyboardButton(str(_("Ro`yhatdan o`tish")))
     markup.add(btn)
+    bot.delete_message(call.from_user.id, call.message.message_id)
     bot.send_message(call.from_user.id, text, reply_markup=markup)
 
 
