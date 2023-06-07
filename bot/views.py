@@ -106,18 +106,20 @@ def checkout(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
     activate(bot_user.language)
     apps = Appointment.objects.filter(patient=bot_user)
-    bot.send_message(message.from_user.id, '<b><u>Sizning arizalaringiz</u></b>', reply_markup=markup)
+    bot.send_message(
+        message.from_user.id, "<b><u>Sizning arizalaringiz</u></b>", reply_markup=markup
+    )
     for app in apps:
         if app.urgent == True:
             text = str(
                 _(
-                    f"<u><b>‼️Tezkor qabul arizasi.</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  <i>{app.patient.first_name}</i>\n<b>Telefon raqam:</b>  <i>{app.patient.phone_number}</i>\n<b>Shikoyat matni:</b> <i>Tezkor aloqa! {app.complaint}</i>\n<b>Yaratilgan vaqti:</b> <i>{app.created}</i>"
+                    f"<u><b>‼️Tezkor qabul arizasi.</b></u>\n<b>Tartib raqami:</b>  {app.id}\n<b>Ismi:</b>  <i>{app.patient.first_name}</i>\n<b>Telefon raqam:</b>  <i>{app.patient.phone_number}</i>\n{f'Telegram: @{app.patient.username}' if app.patient.username else ''}\n<b>Shikoyat matni:</b> <i>Tezkor aloqa! {app.complaint}</i>\n<b>Yaratilgan vaqti:</b> <i>{app.created}</i>"
                 )
             )
         else:
             text = str(
                 _(
-                    f"<b>Tartib raqami:</b>  <i>{app.id}</i>\n<b>Ism:</b>  <i>{app.patient.first_name}</i>\n<b>Familya:</b>  <i>{app.patient.last_name}</i>\n<b>Telefon raqam:</b> <i>{app.patient.phone_number}</i>\n<b>Mas'ul shifokor:</b> <i>{app.docworkday.doctor}</i>\n<b>Qabul kuni:</b> <i>{app.docworkday.day.week_day}</i>\n<b>Qabul vaqti:</> <i>{app.time}</i>\n<b>Yaratilgan vaqti:</b> <i>{app.created}</i>"
+                    f"<b>Tartib raqami:</b>  <i>{app.id}</i>\n<b>Ism:</b>  <i>{app.patient.first_name}</i>\n<b>Familya:</b>  <i>{app.patient.last_name}</i>\n<b>Telefon raqam:</b> <i>{app.patient.phone_number}</i>\n{f'Telegram: @{app.patient.username}' if app.patient.username else ''}\n<b>Mas'ul shifokor:</b> <i>{app.docworkday.doctor}</i>\n<b>Qabul kuni:</b> <i>{app.docworkday.day.week_day}</i>\n<b>Qabul vaqti:</> <i>{app.time.start_time.strftime('%H:%M')}</i>\n<b>Yaratilgan vaqti:</b> <i>{app.created}</i>"
                 )
             )
         bot.send_message(message.from_user.id, text, reply_markup=markup)
@@ -140,6 +142,8 @@ def register(message):
 
 @bot.message_handler(func=lambda message: message.text == str(_("Tezkor Aloqa")))
 def emergency(message):
+    global extra_datas
+    extra_datas[message.from_user.id] = {}
     text = str(
         _(
             """Siz tezkor aloqa qismida siz quyidagi muammolar bo‘yicha bizdan shoshilinch onlayn konsultasiya olishingiz mumkin.\n
@@ -198,7 +202,7 @@ def cont(message):
     markup.add(btn, btn1, btn2)
     text = str(
         _(
-            f"Tezkor ko`rik uchun ariza topshiruvchi be`mor ma`lumotlari:\nIsmi: {bot_user.first_name}\nFamilyasi: {bot_user.last_name}\nTelefon raqami: {bot_user.phone_number}\nShikoyati: Tezkor aloqa!\n\nBarcha ma`lumotlaringiz to`gri bo`lsa tasdiqlash tugmasini bosing!\nP.S: Shikoyat matnini kiritish ixtiyori!"
+            f"<b>Tezkor ko`rik uchun ariza topshiruvchi be`mor ma`lumotlari:\nIsmi: </b><i>{bot_user.first_name}</i>\n<b>Familyasi:</b> <i>{bot_user.last_name}</i>\n<b>Telefon raqami:</b> <i>{bot_user.phone_number}</i>\n<b>Shikoyati:</b> <i>Tezkor aloqa!\n\nBarcha ma`lumotlaringiz to`gri bo`lsa tasdiqlash tugmasini bosing!\nP.S: Shikoyat matnini kiritish ixtiyori!</i>"
         )
     )
     bot.send_message(message.from_user.id, text, reply_markup=markup)
@@ -218,7 +222,7 @@ def make_complaint(message):
     btn2 = types.KeyboardButton(str(_("🛑Bekor qilish")))
     markup.add(btn2)
     bot.send_message(
-        message.from_user.id, str(_("Shikoyat matnini kiriting:")), reply_markup=markup
+        message.from_user.id, str(_("<i>Shikoyat matnini kiriting:</i>")), reply_markup=markup
     )
 
 
@@ -237,7 +241,7 @@ def change_complaint(message):
     markup.add(btn, btn1, btn2)
     text = str(
         _(
-            f"Tezkor ko`rik uchun ariza topshiruvchi be`mor ma`lumotlari:\nIsmi: {bot_user.first_name}\nFamilyasi: {bot_user.last_name}\nTelefon raqami: {bot_user.phone_number}\nShikoyati: Tezkor aloqa!{message.text}\n\nBarcha ma`lumotlaringiz to`gri bo`lsa tasdiqlash tugmasini bosing!"
+            f"<b>Tezkor ko`rik uchun ariza topshiruvchi be`mor ma`lumotlari:\nIsmi: </b><i>{bot_user.first_name}<i>\n<b>Familyasi: </b><i>{bot_user.last_name}</i>\n<b>Telefon raqami:</b> <i>{bot_user.phone_number}</i>\n<b>Shikoyati:</b> <i>Tezkor aloqa!{message.text}</i>\n\n<i><b>Barcha ma`lumotlaringiz to`gri bo`lsa tasdiqlash tugmasini bosing!</b></i>"
         )
     )
     bot.send_message(message.from_user.id, text, reply_markup=markup)
@@ -247,9 +251,10 @@ def change_complaint(message):
 def confirm(message):
     global extra_datas
     patient = Patient.objects.filter(user_id=message.from_user.id)[0]
-    Appointment.objects.create(
+    complaint = extra_datas[message.from_user.id]['complaint'] if 'complaint' in extra_datas else ''
+    app=Appointment.objects.create(
         patient=patient,
-        complaint=extra_datas[message.from_user.id]["complaint"],
+        complaint=complaint,
         urgent=True,
     )
 
@@ -268,11 +273,18 @@ def confirm(message):
         message.chat.id,
         str(
             _(
-                "Tezkor arizangiz adminlarga yuborildi va tez orada hodimlarimiz siz bilan bog`lanishadi."
+                "<b><i>Tezkor arizangiz adminlarga yuborildi va tez orada hodimlarimiz siz bilan bog`lanishadi.</i></b>"
             )
         ),
         reply_markup=markup,
     )
+    text = str(
+            _(
+                f"<b>Tezkor ko`rik uchun ariza topshiruvchi be`mor ma`lumotlari:\nIsmi:</b> <i>{patient.first_name}</i>\n<b>Familyasi:</b> <i>{patient.last_name}</i>\n<b>Telefon raqami:</b> <i>{patient.phone_number}</i>\n<b>Qo`shimcha ma`lumot:</b> <i>Tezkor aloqa! {complaint}</i>\n<b>Qabul vaqti:</b> <i>{app.created}</i>"
+            )
+        )
+    print(app.created)
+    bot.send_message(CHANNEL, text)
     bot.send_message(
         message.chat.id,
         str(_("<b>Shifokor qabuliga yozilish</b>")),
@@ -306,7 +318,11 @@ def make_appointment(message):
 
     bot.send_message(
         message.chat.id,
-        str(_("Bu yerga Shifoxona yoki servis xizmat yurlari haqida qisqacha malumot yozilishi mumkin")),
+        str(
+            _(
+                "Bu yerga Shifoxona yoki servis xizmat yurlari haqida qisqacha malumot yozilishi mumkin"
+            )
+        ),
         reply_markup=markup,
     )
 
@@ -394,28 +410,29 @@ def handle_callback_query(call):
     for docworkday in docworkdays:
         times = docworkday.times.all()
         for time in times:
-            if not Appointment.objects.filter(docworkday=docworkday, time=time).exists():
+            if not Appointment.objects.filter(
+                docworkday=docworkday, time=time
+            ).exists():
                 button = types.InlineKeyboardButton(
                     docworkday.day.week_day, callback_data=f"day|{docworkday.id}"
                 )
+                print(docworkday.id)
                 row_buttons.append(button)
                 if len(row_buttons) == 2:
                     markup.add(*row_buttons)
                 break
+    text = f"<i>{Doctor.objects.get(id=doc_id).about}</i>"
     if len(row_buttons) == 1:
         markup.add(row_buttons[0])
-        print(*row_buttons)
-    elif len(row_buttons)== 0:
-        text = '<i>Shifokorning qabul qilish vaqtlari mavjud emas</i>'
-    else:
-        print(3)
-        text = f"<i>{Doctor.objects.get(id=doc_id).about}</i>"
+        print(markup)
+    elif len(row_buttons) == 0:
+        text = "<i>Shifokorning qabul qilish vaqtlari mavjud emas</i>"
+
     back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
     markup.add(back)
     bot.delete_message(call.from_user.id, message_id=call.message.message_id)
-    bot.send_message(
-        call.from_user.id, text, reply_markup=markup
-    )
+    bot.send_message(call.from_user.id, text, reply_markup=markup)
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("day|"))
 def handle_callback_query(call):
@@ -464,9 +481,12 @@ def handle_callback_query(call):
 
     patient = Patient.objects.filter(user_id=call.from_user.id)[0]
 
-    app=Appointment.objects.create(patient=patient, docworkday=weekday, time=time)
-    bot.send_message(CHANNEL, f"<b>Shifokor qabuliga yozilgan be'mor ma'lumotlari:\nAriza tartib raqami: <i>{app.id}</i>\nIsmi: <i>{patient.first_name}</i>\nFamiliyasi: <i>{patient.last_name}</i>\n{'Telegram: {patient.username}' if patient.username else ''}Mas'ul shifokor: <i>{weekday.doctor.first_name}</i>\nQabul kuni: <i>{weekday.day.week_day}</i>\nQabul vaqti: <i>{time}</i></b>")
-    text = f"<b>Siz <i>{weekday.day.week_day}</i> kuni\nSoat <i>{time}</i> da \nDoktor <i>{weekday.doctor.first_name}</i> qabuliga ro`yhatga olindingiz</b>"
+    app = Appointment.objects.create(patient=patient, docworkday=weekday, time=time)
+    bot.send_message(
+        CHANNEL,
+        f"<b>Shifokor qabuliga yozilgan be'mor ma'lumotlari:\nAriza tartib raqami: <i>{app.id}</i>\nIsmi: <i>{patient.first_name}</i>\nFamiliyasi: <i>{patient.last_name}</i>\n{f'Telegram: @{patient.username}' if patient.username else ''}\nMas'ul shifokor: <i>{weekday.doctor.first_name}</i>\nQabul kuni: <i>{weekday.day.week_day}</i>\nQabul vaqti: <i>{time.start_time.strftime('%H:%M')}</i></b>",
+    )
+    text = f"<b>Siz <i>{weekday.day.week_day}</i> kuni\nSoat <i>{time.start_time.strftime('%H:%M')}</i> da \nDoktor <i>{weekday.doctor.first_name}</i> qabuliga ro`yhatga olindingiz</b>"
     markup = types.ReplyKeyboardMarkup(
         row_width=2, resize_keyboard=True, one_time_keyboard=True
     )
