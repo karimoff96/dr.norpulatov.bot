@@ -27,4 +27,3 @@ typing_extensions==4.6.3
 tzdata==2023.3
 urllib3==2.0.2
 
-# export SECRET_KEY=django-insecure-7yg(^9^c(o(szs!@io_@_a607ogo$$)tn^6w^yi28e36^x5*!@

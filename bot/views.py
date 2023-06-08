@@ -33,7 +33,18 @@ def index(request):
 
 @bot.message_handler(commands=["start"])
 def start(message):
-    if Patient.objects.filter(active=True):
+    user = Patient.objects.filter(user_id=message.from_user.id).first()
+    if len(message.text.split())>1:
+        doc = Doctor.objects.filter(doc_token=message.text.split()[1]).first()
+        doc.doc_id=message.from_user.id
+        doc.active=True
+        doc.save()
+        markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+        btn = types.KeyboardButton(str(_("Qabulni ko'rish")))
+        # btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+        markup.add(btn)
+        bot.send_message(message.from_user.id, f'Assalomu alaykum doktor {doc.first_name}!\nBu bot sizning aqabulingizga yozilgan yangi be`morlar haqida ma`lumot beradi', reply_markup=markup)
+    if user and user.active == True:
         markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
         btn = types.KeyboardButton(str(_("Qabulga yozilish")))
         btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
@@ -49,6 +60,7 @@ def start(message):
             user_id=message.from_user.id,
             username=message.from_user.username,
             first_name=message.from_user.first_name,
+            source='bot',
         )
         text = "Tinlni tanlang\nТинлни танланг"
         markup = types.InlineKeyboardMarkup(row_width=2)
@@ -96,6 +108,7 @@ def cancel(message):
 
 @bot.message_handler(func=lambda message: message.text == str(_("Qabulni ko`rish")))
 def checkout(message):
+    
     markup = types.ReplyKeyboardMarkup(
         row_width=2, resize_keyboard=True, one_time_keyboard=True
     )

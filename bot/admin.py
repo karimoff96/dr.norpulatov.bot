@@ -16,16 +16,15 @@ class PatientAdmin(admin.ModelAdmin):
         "phone_number",
         "created_at",
         "active",
-    )  # Specify the fields to display in the list view
+        'source',
+    ) 
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        # queryset = queryset.filter(active=True)  # Filter the queryset to include only active patients
         return queryset
 
 
 admin.site.register(Patient, PatientAdmin)
-admin.site.register(Doctor)
 admin.site.register(WeekDay)
 admin.site.register(DocWorkDay)
 
@@ -37,9 +36,13 @@ class AppointmentAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        # queryset = queryset.filter(active=True)
         queryset = queryset.order_by("-urgent", "-created_at")
         return queryset
 
 
 admin.site.register(Appointment, AppointmentAdmin)
+class DoctorAdmin(admin.ModelAdmin): # new
+     readonly_fields = ['img_preview']
+     list_display = ['first_name', 'img_preview']
+
+admin.site.register(Doctor, DoctorAdmin)
