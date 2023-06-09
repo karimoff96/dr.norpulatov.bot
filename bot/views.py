@@ -6,7 +6,6 @@ from django.views.decorators.csrf import csrf_exempt
 from environs import Env
 from telebot import types
 from telebot.apihelper import ApiTelegramException
-
 from .models import Appointment, Doctor, DocWorkDay, Patient, Time
 
 # Create your views here.
@@ -33,43 +32,76 @@ def index(request):
 
 @bot.message_handler(commands=["start"])
 def start(message):
-    user = Patient.objects.filter(user_id=message.from_user.id).first()
-    if len(message.text.split())>1:
+    if len(message.text.split()) > 1:
         doc = Doctor.objects.filter(doc_token=message.text.split()[1]).first()
-        doc.doc_id=message.from_user.id
-        doc.active=True
+        doc.doc_id = message.from_user.id
+        doc.active = True
         doc.save()
         markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-        btn = types.KeyboardButton(str(_("Qabulni ko'rish")))
+        btn = types.KeyboardButton(str(_("Mening qabulim")))
         # btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
         markup.add(btn)
-        bot.send_message(message.from_user.id, f'Assalomu alaykum doktor {doc.first_name}!\nBu bot sizning aqabulingizga yozilgan yangi be`morlar haqida ma`lumot beradi', reply_markup=markup)
-    if user and user.active == True:
-        markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-        btn = types.KeyboardButton(str(_("Qabulga yozilish")))
-        btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-        markup.add(btn, btn1)
         bot.send_message(
-            message.chat.id,
-            str(_("<b>Shifokor qabuliga yozilish</b>")),
+            message.from_user.id,
+            f"Assalomu alaykum doktor {doc.first_name}!\nBu bot sizning mavjud va yangi qabulingizga yozilgan be`morlar haqida ma`lumot beradi",
             reply_markup=markup,
         )
-
     else:
-        Patient.objects.create(
-            user_id=message.from_user.id,
-            username=message.from_user.username,
-            first_name=message.from_user.first_name,
-            source='bot',
-        )
-        text = "Tinlni tanlang\nТинлни танланг"
-        markup = types.InlineKeyboardMarkup(row_width=2)
-        b = types.InlineKeyboardButton("Lotin", callback_data="en")
-        b1 = types.InlineKeyboardButton("Кирилл", callback_data="ru")
-        markup.add(b, b1)
-        bot.send_message(message.chat.id, text, reply_markup=markup)
+        user = Patient.objects.filter(user_id=message.from_user.id).first()
+        doc = Doctor.objects.filter(doc_id=message.from_user.id).first()
+        if user and user.active == True:
+            markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+            btn = types.KeyboardButton(str(_("Qabulga yozilish")))
+            btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+            markup.add(btn, btn1)
+            bot.send_message(
+                message.chat.id,
+                str(_("<b>Shifokor qabuliga yozilish</b>")),
+                reply_markup=markup,
+            )
+        elif doc:
+            markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+            btn = types.KeyboardButton(str(_("Mening qabulim")))
+            # btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+            markup.add(btn)
+            bot.send_message(
+                message.from_user.id,
+                f"Assalomu alaykum doktor {doc.first_name}!",
+                reply_markup=markup,
+            )
+        else:
+            Patient.objects.create(
+                user_id=message.from_user.id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+                source="bot",
+            )
+            text = "Tinlni tanlang\nТинлни танланг"
+            markup = types.InlineKeyboardMarkup(row_width=2)
+            b = types.InlineKeyboardButton("Lotin", callback_data="en")
+            b1 = types.InlineKeyboardButton("Кирилл", callback_data="ru")
+            markup.add(b, b1)
+            bot.send_message(message.chat.id, text, reply_markup=markup)
+            
 
-
+@bot.message_handler(func=lambda message: message.text == str(_("Mening qabulim")))
+def doc_appointments(message):
+    doc = Doctor.objects.filter(doc_id = message.from_user.id).first()
+    
+    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    btn = types.KeyboardButton(str(_("Mening qabulim")))
+    markup.add(btn)
+    if doc:
+        apps = Appointment.objects.filter(docworkday__doctor=doc)
+        for app in apps:
+            text = str(
+                _(
+                    f"<b>Tartib raqami:</b>  <i>{app.id}</i>\n<b>Ism:</b>  <i>{app.patient.first_name}</i>\n<b>Familya:</b>  <i>{app.patient.last_name}</i>\n<b>Telefon raqam:</b> <i>{app.patient.phone_number}</i>\n{f'Telegram: @{app.patient.username}' if app.patient.username else ''}\n<b>Mas'ul shifokor:</b> <i>{app.docworkday.doctor}</i>\n<b>Qabul kuni:</b> <i>{app.docworkday.day.week_day}</i>\n<b>Qabul vaqti:</> <i>{app.time.start_time.strftime('%H:%M')}</i>\n<b>Yaratilgan vaqti:</b> <i>{app.created}</i>"
+                )
+            )
+            bot.send_message(message.from_user.id, text, reply_markup=markup)
+        else:
+            bot.send_message(message.from_user.id, '<b><i>Ro`yhatga olingan qabullar topilmadi!</i></b>', reply_markup=markup)
 @bot.message_handler(func=lambda message: message.text == str(_("🛑Bekor qilish")))
 def cancel(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
@@ -108,7 +140,6 @@ def cancel(message):
 
 @bot.message_handler(func=lambda message: message.text == str(_("Qabulni ko`rish")))
 def checkout(message):
-    
     markup = types.ReplyKeyboardMarkup(
         row_width=2, resize_keyboard=True, one_time_keyboard=True
     )
