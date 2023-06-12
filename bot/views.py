@@ -49,16 +49,30 @@ def start(message):
     else:
         user = Patient.objects.filter(user_id=message.from_user.id).first()
         doc = Doctor.objects.filter(doc_id=message.from_user.id).first()
-        if user and user.active == True:
-            markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-            btn = types.KeyboardButton(str(_("Qabulga yozilish")))
-            btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-            markup.add(btn, btn1)
-            bot.send_message(
-                message.chat.id,
-                str(_("<b>Shifokor qabuliga yozilish</b>")),
-                reply_markup=markup,
-            )
+        if user:
+            if user.active == True:
+                markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+                btn = types.KeyboardButton(str(_("Qabulga yozilish")))
+                btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+                markup.add(btn, btn1)
+                bot.send_message(
+                    message.chat.id,
+                    str(_("<b>Shifokor qabuliga yozilish</b>")),
+                    reply_markup=markup,
+                )
+            else:
+                user.first_name=message.from_user.first_name
+                user.username=message.from_user.username if message.from_user.username else ''
+                user.first_name=message.from_user.first_name
+                user.source="bot"
+                user.save()
+                text = "Tinlni tanlang\nТинлни танланг"
+                markup = types.InlineKeyboardMarkup(row_width=2)
+                b = types.InlineKeyboardButton("Lotin", callback_data="en")
+                b1 = types.InlineKeyboardButton("Кирилл", callback_data="ru")
+                markup.add(b, b1)
+                bot.send_message(message.chat.id, text, reply_markup=markup)
+
         elif doc:
             markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
             btn = types.KeyboardButton(str(_("Mening qabulim")))
@@ -72,7 +86,7 @@ def start(message):
         else:
             Patient.objects.create(
                 user_id=message.from_user.id,
-                username=message.from_user.username,
+                username=message.from_user.username if message.from_user.username else '',
                 first_name=message.from_user.first_name,
                 source="bot",
             )
@@ -437,6 +451,9 @@ def contact(message):
         )
         btn = types.KeyboardButton(str(_("Qabulga yozilish")))
         btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+        if Appointment.objects.filter(patient__user_id=message.from_user.id):
+            btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
+            markup.add(btn1)
         markup.add(btn, btn2)
         bot.send_message(
             message.chat.id, str(_(f"Telefon raqam qabul qilindi: {phone_number}"))
