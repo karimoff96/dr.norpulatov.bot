@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Any, Iterable, Optional
-
+from .signals import send_appointment_to_doctor
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_save
@@ -150,6 +150,8 @@ class Appointment(models.Model):
 
     def __str__(self) -> str:
         return f"{self.patient.first_name} {self.patient.last_name}"
+    
+    
 
     @property
     def created(self):
@@ -162,3 +164,9 @@ class Appointment(models.Model):
     class Meta:
         verbose_name = "Appointment"
         verbose_name_plural = "Appointments"
+
+    def save(self, *args, **kwargs):
+        doc = Doctor.objects.filter(doc_id = self.docworkday.doctor.doc_id).first()
+        data = {'id': len(Appointment.objects.filter(docworkday__doctor=doc)),'patient': {'first_name':self.patient, 'last_name':self.patient.last_name, 'age':self.patient.age, 'complaint':self.complaint}, 'appointment':{'day':self.docworkday.day, 'time':self.time, 'created_at':datetime.now().strftime("%Y-%m-%d %H:%M")}}
+        send_appointment_to_doctor(data, self.docworkday.doctor.doc_id)
+        super().save(*args, **kwargs) 

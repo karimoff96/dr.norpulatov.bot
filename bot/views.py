@@ -61,10 +61,12 @@ def start(message):
                     reply_markup=markup,
                 )
             else:
-                user.first_name=message.from_user.first_name
-                user.username=message.from_user.username if message.from_user.username else ''
-                user.first_name=message.from_user.first_name
-                user.source="bot"
+                user.first_name = message.from_user.first_name
+                user.username = (
+                    message.from_user.username if message.from_user.username else ""
+                )
+                user.first_name = message.from_user.first_name
+                user.source = "bot"
                 user.save()
                 text = "Tinlni tanlang\nТинлни танланг"
                 markup = types.InlineKeyboardMarkup(row_width=2)
@@ -86,7 +88,9 @@ def start(message):
         else:
             Patient.objects.create(
                 user_id=message.from_user.id,
-                username=message.from_user.username if message.from_user.username else '',
+                username=message.from_user.username
+                if message.from_user.username
+                else "",
                 first_name=message.from_user.first_name,
                 source="bot",
             )
@@ -96,12 +100,12 @@ def start(message):
             b1 = types.InlineKeyboardButton("Кирилл", callback_data="ru")
             markup.add(b, b1)
             bot.send_message(message.chat.id, text, reply_markup=markup)
-            
+
 
 @bot.message_handler(func=lambda message: message.text == str(_("Mening qabulim")))
 def doc_appointments(message):
-    doc = Doctor.objects.filter(doc_id = message.from_user.id).first()
-    
+    doc = Doctor.objects.filter(doc_id=message.from_user.id).first()
+
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn = types.KeyboardButton(str(_("Mening qabulim")))
     markup.add(btn)
@@ -114,8 +118,14 @@ def doc_appointments(message):
                 )
             )
             bot.send_message(message.from_user.id, text, reply_markup=markup)
-        else:
-            bot.send_message(message.from_user.id, '<b><i>Ro`yhatga olingan qabullar topilmadi!</i></b>', reply_markup=markup)
+    else:
+        bot.send_message(
+            message.from_user.id,
+            "<b><i>Ro`yhatga olingan qabullar topilmadi!</i></b>",
+            reply_markup=markup,
+        )
+
+
 @bot.message_handler(func=lambda message: message.text == str(_("🛑Bekor qilish")))
 def cancel(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
