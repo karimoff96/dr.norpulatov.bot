@@ -329,6 +329,7 @@ def confirm(message):
     app = Appointment.objects.create(
         patient=patient,
         complaint=complaint,
+        time=datetime.now(),
         urgent=True,
     )
 

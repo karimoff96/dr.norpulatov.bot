@@ -30,7 +30,7 @@ admin.site.register(DocWorkDay)
 
 
 class AppointmentAdmin(admin.ModelAdmin):
-    list_display = ("patient", "complaint", "urgent", "created_at", "active")
+    list_display = ("patient", "complaint", "urgent", "created_at", "active", 'time', 'docworkday')
     list_editable = ("active",)
     list_filter = ("urgent", "active", "created_at")
 
