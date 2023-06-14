@@ -5,10 +5,8 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from environs import Env
 from telebot import types
-from telebot.apihelper import ApiTelegramException
 from .models import Appointment, Doctor, DocWorkDay, Patient, Time
 
-# Create your views here.
 env = Env()
 env.read_env()
 
@@ -35,6 +33,7 @@ def start(message):
     if len(message.text.split()) > 1:
         doc = Doctor.objects.filter(doc_token=message.text.split()[1]).first()
         doc.doc_id = message.from_user.id
+        doc.show_img_preview = False
         doc.active = True
         doc.save()
         markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
@@ -110,7 +109,7 @@ def doc_appointments(message):
     btn = types.KeyboardButton(str(_("Mening qabulim")))
     markup.add(btn)
     if doc:
-        apps = Appointment.objects.filter(docworkday__doctor=doc)
+        apps = Appointment.objects.filter(docworkday__doctor=doc, active=True)
         for app in apps:
             if app.patient.source == "web":
                 text = str(
@@ -334,12 +333,8 @@ def confirm(message):
         else ""
     )
     app = Appointment.objects.create(
-        patient=patient,
-        complaint=complaint,
-        time=datetime.now(),
-        urgent=True,
+        patient=patient, complaint=complaint, urgent=True, active=True, type="bot"
     )
-
     apps = Appointment.objects.filter(patient=patient)
     activate(patient.language)
     markup = types.ReplyKeyboardMarkup(
@@ -401,7 +396,7 @@ def make_appointment(message):
         message.chat.id,
         str(
             _(
-                "Bu yerga Shifoxona yoki servis xizmat yurlari haqida qisqacha malumot yozilishi mumkin"
+                "Bu yerga Shifoxona yoki servis xizmat turlari haqida qisqacha ma`lumot yozilishi mumkin"
             )
         ),
         reply_markup=markup,
@@ -495,12 +490,11 @@ def handle_callback_query(call):
         times = docworkday.times.all()
         for time in times:
             if not Appointment.objects.filter(
-                docworkday=docworkday, time=time
+                docworkday=docworkday, time=time, active=True
             ).exists():
                 button = types.InlineKeyboardButton(
                     docworkday.day.week_day, callback_data=f"day|{docworkday.id}"
                 )
-                print(docworkday.id)
                 row_buttons.append(button)
                 if len(row_buttons) == 2:
                     markup.add(*row_buttons)
@@ -508,7 +502,6 @@ def handle_callback_query(call):
     text = f"<i>{Doctor.objects.get(id=doc_id).about}</i>"
     if len(row_buttons) == 1:
         markup.add(row_buttons[0])
-        print(markup)
     elif len(row_buttons) == 0:
         text = "<i>Shifokorning qabul qilish vaqtlari mavjud emas</i>"
 
@@ -526,7 +519,9 @@ def handle_callback_query(call):
     markup = types.InlineKeyboardMarkup(row_width=2)
     row_buttons = []
     for time in times:
-        if Appointment.objects.filter(docworkday_id=day_id, time=time).exists():
+        if Appointment.objects.filter(
+            docworkday_id=day_id, time=time, active=True
+        ).exists():
             continue
         button = types.InlineKeyboardButton(
             time.start_time.strftime("%H:%M"), callback_data=f"time|{time.id}|{day_id}"
@@ -551,6 +546,7 @@ def handle_callback_query(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("time|"))
 def handle_callback_query(call):
     global extra_datas
+    print(extra_datas)
     extra_datas[call.from_user.id]["time_id"] = call.data.split("|")[1]
     extra_datas[call.from_user.id]["day_id"] = int(call.data.split("|")[2])
     weekday = DocWorkDay.objects.filter(
@@ -564,8 +560,9 @@ def handle_callback_query(call):
     time = Time.objects.filter(id=extra_datas[call.from_user.id]["time_id"])[0]
 
     patient = Patient.objects.filter(user_id=call.from_user.id)[0]
-
-    app = Appointment.objects.create(patient=patient, docworkday=weekday, time=time)
+    app = Appointment.objects.create(
+        patient=patient, docworkday=weekday, time=time, type="bot"
+    )
     bot.send_message(
         CHANNEL,
         f"<b>Shifokor qabuliga yozilgan be'mor ma'lumotlari:\nAriza tartib raqami: <i>{app.id}</i>\nIsmi: <i>{patient.first_name}</i>\nFamiliyasi: <i>{patient.last_name}</i>\n{f'Telegram: @{patient.username}' if patient.username else ''}\nMas'ul shifokor: <i>{weekday.doctor.first_name}</i>\nQabul kuni: <i>{weekday.day.week_day}</i>\nQabul vaqti: <i>{time.start_time.strftime('%H:%M')}</i></b>",
@@ -608,33 +605,7 @@ def back(call):
     btn = types.KeyboardButton(str(_("Qabulga yozilish")))
     btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
     markup.add(btn, btn2)
-    if Appointment.objects.filter(patient__user_id=call.from_user.id):
+    if Appointment.objects.filter(patient__user_id=call.from_user.id, active=True):
         btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
         markup.add(btn1)
     bot.send_message(call.from_user.id, "<b>Bosh menu</b>", reply_markup=markup)
-
-
-def cron_job(request):
-    users = Patient.objects.filter(active=False)
-    fail = 0
-    success = 0
-    for u in users:
-        try:
-            bot.send_message(
-                u.user_id,
-                "<b>Hurmatli foydalanuvchi botdan to`liq ro`yhatdan o`tmaganingizcha biz siz haqingizda ma`limotga ega bo`la olmaymiz.\nIltimos qabulga yozilishni yakunlang!</b>",
-            )
-            success += 1
-        except ApiTelegramException:
-            fail += 1
-    response = HttpResponse()
-    response.write(
-        f"<h1>Habar yuborishda yakunlandi: </h1>\nSuccess: {success}\nFail: {fail}"
-    )
-    bot.send_message(
-        CHANNEL,
-        f'<b>To`liq ro`yhatdan o`tmagan foydalanuvchilarga "Registrtatsiyani yakunlash" to`grisidagi eslatma habar yuborish yakunlandi!</b>\n<b>Nofaol foydalanuvchilar:</b> <i>{success}</i>\n<b>Botni blocklagan foydalanuvchilar:</b> <i>{fail}</i>',
-    )
-    return response
-
-

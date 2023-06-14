@@ -26,6 +26,11 @@ class PatientAdmin(admin.ModelAdmin):
 
 admin.site.register(Patient, PatientAdmin)
 admin.site.register(WeekDay)
+class DoctorAdmin(admin.ModelAdmin): # new
+     readonly_fields = ['img_preview']
+     list_display = ['first_name', 'img_preview']
+
+admin.site.register(Doctor, DoctorAdmin)
 admin.site.register(DocWorkDay)
 
 

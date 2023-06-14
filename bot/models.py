@@ -1,9 +1,6 @@
 from datetime import datetime, timedelta
-from typing import Any, Iterable, Optional
-from .signals import send_appointment_to_doctor
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models.signals import post_save
 import segno
 from django.utils.html import mark_safe
 import uuid
@@ -47,11 +44,15 @@ class Doctor(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     active = models.BooleanField(default=False)
     qrcode = models.CharField(max_length=100, blank=True)
-    doc_token=models.CharField(max_length=256, default=str(uuid.uuid4()))
-    def img_preview(self):  # new
-        return mark_safe(
-            '<img src = "{url}" width = "200"/>'.format(url=f"/{self.qrcode}")
-        )
+    doc_token = models.CharField(max_length=256, default=str(uuid.uuid4()))
+    show_img_preview = models.BooleanField(default=True)
+
+    def img_preview(self): 
+        if self.show_img_preview:
+            return mark_safe(
+                '<img src = "{url}" width = "200"/>'.format(url=f"/{self.qrcode}")
+            )
+        return ""
 
     def __str__(self) -> str:
         return self.first_name
@@ -66,7 +67,9 @@ class Doctor(models.Model):
         indexes = [models.Index(fields=["first_name"])]
 
     def qr(self):
-        qrcode = segno.make(f"https://t.me/openai_chat_gpt_robot?start={self.doc_token}")
+        qrcode = segno.make(
+            f"https://t.me/openai_chat_gpt_robot?start={self.doc_token}"
+        )
         file_name = f"media/images/{self.doc_token}.png"
         qrcode.save(file_name, dark="darkred", light="lightblue", scale=10)
         return file_name
@@ -133,6 +136,10 @@ class Appointment(models.Model):
         ("cancel", "Bekor qilindi"),
         ("unsuccessfull", "Bajarilmadi"),
     )
+    types = (
+        ("bot", "Bot orqali"),
+        ("web", "Admin panel orqali"),
+    )
     docworkday = models.ForeignKey(
         DocWorkDay, on_delete=models.CASCADE, blank=True, null=True
     )
@@ -147,16 +154,16 @@ class Appointment(models.Model):
     price = models.DecimalField(default=0, decimal_places=0, max_digits=8)
     card = models.CharField(max_length=250, blank=True)
     status = models.CharField(choices=statuses, default="applied", max_length=15)
+    type = models.CharField(choices=types, default="web", max_length=15)
 
     def __str__(self) -> str:
         return f"{self.patient.first_name} {self.patient.last_name}"
-    
+
     def validate_unique(self, exclude=None):
         queryset = type(self).objects.filter(
             docworkday=self.docworkday,
             time=self.time,
         )
-        print(queryset)
         if self.pk is not None:
             queryset = queryset.exclude(pk=self.pk)
         if queryset.exists():
@@ -170,6 +177,10 @@ class Appointment(models.Model):
         return (self.created_at + timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 
     @property
+    def created_date(self):
+        return (self.created_at + timedelta(hours=5)).strftime("%Y-%m-%d")
+
+    @property
     def updated(self):
         return (self.updated_at + timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 
@@ -178,7 +189,23 @@ class Appointment(models.Model):
         verbose_name_plural = "Appointments"
 
     def save(self, *args, **kwargs):
-        doc = Doctor.objects.filter(doc_id = self.docworkday.doctor.doc_id).first()
-        data = {'id': len(Appointment.objects.filter(docworkday__doctor=doc)),'patient': {'first_name':self.patient, 'last_name':self.patient.last_name, 'age':self.patient.age, 'complaint':self.complaint}, 'appointment':{'day':self.docworkday.day, 'time':self.time, 'created_at':datetime.now().strftime("%Y-%m-%d %H:%M")}}
-        send_appointment_to_doctor(data, self.docworkday.doctor.doc_id)
-        super().save(*args, **kwargs) 
+        if self.type == "web":
+            from .signals import send_appointment_to_doctor
+
+            doc = Doctor.objects.filter(doc_id=self.docworkday.doctor.doc_id).first()
+            data = {
+                "id": len(Appointment.objects.filter(docworkday__doctor=doc)),
+                "patient": {
+                    "first_name": self.patient,
+                    "last_name": self.patient.last_name,
+                    "age": self.patient.age,
+                    "complaint": self.complaint,
+                },
+                "appointment": {
+                    "day": self.docworkday.day,
+                    "time": self.time,
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                },
+            }
+            send_appointment_to_doctor(data, self.docworkday.doctor.doc_id)
+        super().save(*args, **kwargs)
