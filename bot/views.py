@@ -112,11 +112,18 @@ def doc_appointments(message):
     if doc:
         apps = Appointment.objects.filter(docworkday__doctor=doc)
         for app in apps:
-            text = str(
-                _(
-                    f"<b>Tartib raqami:</b>  <i>{app.id}</i>\n<b>Ism:</b>  <i>{app.patient.first_name}</i>\n<b>Familya:</b>  <i>{app.patient.last_name}</i>\n<b>Telefon raqam:</b> <i>{app.patient.phone_number}</i>\n{f'Telegram: @{app.patient.username}' if app.patient.username else ''}\n<b>Mas'ul shifokor:</b> <i>{app.docworkday.doctor}</i>\n<b>Qabul kuni:</b> <i>{app.docworkday.day.week_day}</i>\n<b>Qabul vaqti:</> <i>{app.time.start_time.strftime('%H:%M')}</i>\n<b>Yaratilgan vaqti:</b> <i>{app.created}</i>"
+            if app.patient.source == "web":
+                text = str(
+                    _(
+                        f"<b>Tartib raqami:</b>  <i>{app.id}</i>\n<b>Ism:</b>  <i>{app.patient.first_name}</i>\n<b>Familya:</b>  <i>{app.patient.last_name}</i>\n<b>Telefon raqam:</b> <i>{app.patient.phone_number}</i>\n<b>Mas'ul shifokor:</b> <i>{app.docworkday.doctor}</i>\n<b>Qabul kuni:</b> <i>{app.docworkday.day.week_day}</i>\n<b>Qabul vaqti:</> <i>{app.time.start_time.strftime('%H:%M')}</i>\n<b>Yaratilgan sana:</b> <i>{app.created}\n{f'Qo`shimcha: {app.complaint}' if len(app.complaint)>0 else '<b>Qo`shimcha</b>: Admin panel orqali ariza yaratildi'}\n</i>"
+                    )
                 )
-            )
+            else:
+                text = str(
+                    _(
+                        f"""<b>Tartib raqami:</b>  <i>{app.id}</i>\n<b>Ism:</b>  <i>{app.patient.first_name}</i>\n<b>Familya:</b>  <i>{app.patient.last_name}</i>\n<b>Telefon raqam:</b> <i>{app.patient.phone_number}</i>\n{f'Telegram: @{app.patient.username}' if app.patient.username else f"Telegram: <a href='tg://user?id={app.patient.user_id}'>{app.patient.first_name}</a>"}\n<b>Mas'ul shifokor:</b> <i>{app.docworkday.doctor}</i>\n<b>Qabul kuni:</b> <i>{app.docworkday.day.week_day}</i>\n<b>Qabul vaqti:</> <i>{app.time.start_time.strftime('%H:%M')}</i>\n<b>Yaratilgan sana:</b> <i>{app.created}</i>"""
+                    )
+                )
             bot.send_message(message.from_user.id, text, reply_markup=markup)
     else:
         bot.send_message(
@@ -629,3 +636,5 @@ def cron_job(request):
         f'<b>To`liq ro`yhatdan o`tmagan foydalanuvchilarga "Registrtatsiyani yakunlash" to`grisidagi eslatma habar yuborish yakunlandi!</b>\n<b>Nofaol foydalanuvchilar:</b> <i>{success}</i>\n<b>Botni blocklagan foydalanuvchilar:</b> <i>{fail}</i>',
     )
     return response
+
+

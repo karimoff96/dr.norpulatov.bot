@@ -151,7 +151,19 @@ class Appointment(models.Model):
     def __str__(self) -> str:
         return f"{self.patient.first_name} {self.patient.last_name}"
     
-    
+    def validate_unique(self, exclude=None):
+        queryset = type(self).objects.filter(
+            docworkday=self.docworkday,
+            time=self.time,
+        )
+        print(queryset)
+        if self.pk is not None:
+            queryset = queryset.exclude(pk=self.pk)
+        if queryset.exists():
+            raise ValidationError(
+                f"An appointment with the same doctor, day, and time already exists!"
+            )
+        super().validate_unique(exclude)
 
     @property
     def created(self):

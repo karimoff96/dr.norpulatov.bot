@@ -16,8 +16,8 @@ class PatientAdmin(admin.ModelAdmin):
         "phone_number",
         "created_at",
         "active",
-        'source',
-    ) 
+        "source",
+    )
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -29,20 +29,15 @@ admin.site.register(WeekDay)
 admin.site.register(DocWorkDay)
 
 
+from django.contrib import admin
+from .forms import AppointmentForm
+from .models import Appointment, DocWorkDay
+
+
 class AppointmentAdmin(admin.ModelAdmin):
     list_display = ("patient", "complaint", "urgent", "created_at", "active", 'time', 'docworkday')
     list_editable = ("active",)
     list_filter = ("urgent", "active", "created_at")
-
-    def get_queryset(self, request):
-        queryset = super().get_queryset(request)
-        queryset = queryset.order_by("-urgent", "-created_at")
-        return queryset
-
-
 admin.site.register(Appointment, AppointmentAdmin)
-class DoctorAdmin(admin.ModelAdmin): # new
-     readonly_fields = ['img_preview']
-     list_display = ['first_name', 'img_preview']
 
-admin.site.register(Doctor, DoctorAdmin)
+
