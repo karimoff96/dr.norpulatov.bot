@@ -5,12 +5,15 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from environs import Env
 from telebot import types
-from .models import Appointment, Doctor, DocWorkDay, Patient, Time
+from .models import Appointment, Doctor, DocWorkDay, Patient, Time, Letter
+from telebot.apihelper import ApiTelegramException
 
 env = Env()
 env.read_env()
 
 CHANNEL = env.int("CHANNEL")
+ADMIN = env.int("ADMIN")
+
 bot = telebot.TeleBot(env.str("BOT_TOKEN"), parse_mode="HTML")
 extra_datas = {}
 
@@ -28,77 +31,91 @@ def index(request):
         return HttpResponse(status=200)
 
 
-@bot.message_handler(commands=["start"])
+@bot.message_handler(commands=["start", "send"])
 def start(message):
-    if len(message.text.split()) > 1:
-        doc = Doctor.objects.filter(doc_token=message.text.split()[1]).first()
-        doc.doc_id = message.from_user.id
-        doc.show_img_preview = False
-        doc.active = True
-        doc.save()
-        markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-        btn = types.KeyboardButton(str(_("Mening qabulim")))
-        # btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-        markup.add(btn)
-        bot.send_message(
-            message.from_user.id,
-            f"Assalomu alaykum doktor {doc.first_name}!\nBu bot sizning mavjud va yangi qabulingizga yozilgan be`morlar haqida ma`lumot beradi",
-            reply_markup=markup,
-        )
-    else:
-        user = Patient.objects.filter(user_id=message.from_user.id).first()
-        doc = Doctor.objects.filter(doc_id=message.from_user.id).first()
-        if user:
-            if user.active == True:
-                markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-                btn = types.KeyboardButton(str(_("Qabulga yozilish")))
-                btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-                markup.add(btn, btn1)
-                bot.send_message(
-                    message.chat.id,
-                    str(_("<b>Shifokor qabuliga yozilish</b>")),
-                    reply_markup=markup,
-                )
-            else:
-                user.first_name = message.from_user.first_name
-                user.username = (
-                    message.from_user.username if message.from_user.username else ""
-                )
-                user.first_name = message.from_user.first_name
-                user.source = "bot"
-                user.save()
-                text = "Tinlni tanlang\nТинлни танланг"
-                markup = types.InlineKeyboardMarkup(row_width=2)
-                b = types.InlineKeyboardButton("Lotin", callback_data="en")
-                b1 = types.InlineKeyboardButton("Кирилл", callback_data="ru")
-                markup.add(b, b1)
-                bot.send_message(message.chat.id, text, reply_markup=markup)
-
-        elif doc:
+    if message.text == "/start":
+        if len(message.text.split()) > 1:
+            doc = Doctor.objects.filter(doc_token=message.text.split()[1]).first()
+            doc.doc_id = message.from_user.id
+            doc.show_img_preview = False
+            doc.active = True
+            doc.save()
             markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
             btn = types.KeyboardButton(str(_("Mening qabulim")))
             # btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
             markup.add(btn)
             bot.send_message(
                 message.from_user.id,
-                f"Assalomu alaykum doktor {doc.first_name}!",
+                f"Assalomu alaykum doktor {doc.first_name}!\nBu bot sizning mavjud va yangi qabulingizga yozilgan be`morlar haqida ma`lumot beradi",
                 reply_markup=markup,
             )
         else:
-            Patient.objects.create(
-                user_id=message.from_user.id,
-                username=message.from_user.username
-                if message.from_user.username
-                else "",
-                first_name=message.from_user.first_name,
-                source="bot",
-            )
-            text = "Tinlni tanlang\nТинлни танланг"
-            markup = types.InlineKeyboardMarkup(row_width=2)
-            b = types.InlineKeyboardButton("Lotin", callback_data="en")
-            b1 = types.InlineKeyboardButton("Кирилл", callback_data="ru")
-            markup.add(b, b1)
-            bot.send_message(message.chat.id, text, reply_markup=markup)
+            user = Patient.objects.filter(user_id=message.from_user.id).first()
+            doc = Doctor.objects.filter(doc_id=message.from_user.id).first()
+            if user:
+                if user.active == True:
+                    markup = types.ReplyKeyboardMarkup(
+                        row_width=2, resize_keyboard=True
+                    )
+                    btn = types.KeyboardButton(str(_("Qabulga yozilish")))
+                    btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+                    markup.add(btn, btn1)
+                    bot.send_message(
+                        message.chat.id,
+                        str(_("<b>Shifokor qabuliga yozilish</b>")),
+                        reply_markup=markup,
+                    )
+                else:
+                    user.first_name = message.from_user.first_name
+                    user.username = (
+                        message.from_user.username if message.from_user.username else ""
+                    )
+                    user.first_name = message.from_user.first_name
+                    user.source = "bot"
+                    user.save()
+                    text = "Tinlni tanlang\nТинлни танланг"
+                    markup = types.InlineKeyboardMarkup(row_width=2)
+                    b = types.InlineKeyboardButton("Lotin", callback_data="en")
+                    b1 = types.InlineKeyboardButton("Кирилл", callback_data="ru")
+                    markup.add(b, b1)
+                    bot.send_message(message.chat.id, text, reply_markup=markup)
+
+            elif doc:
+                markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+                btn = types.KeyboardButton(str(_("Mening qabulim")))
+                # btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+                markup.add(btn)
+                bot.send_message(
+                    message.from_user.id,
+                    f"Assalomu alaykum doktor {doc.first_name}!",
+                    reply_markup=markup,
+                )
+            else:
+                Patient.objects.create(
+                    user_id=message.from_user.id,
+                    username=message.from_user.username
+                    if message.from_user.username
+                    else "",
+                    first_name=message.from_user.first_name,
+                    source="bot",
+                )
+                text = "Tinlni tanlang\nТинлни танланг"
+                markup = types.InlineKeyboardMarkup(row_width=2)
+                b = types.InlineKeyboardButton("Lotin", callback_data="en")
+                b1 = types.InlineKeyboardButton("Кирилл", callback_data="ru")
+                markup.add(b, b1)
+                bot.send_message(message.chat.id, text, reply_markup=markup)
+    elif message.text == "/send" and message.from_user.id==ADMIN:
+        Letter.objects.create(admin_id=ADMIN, active=True)
+        markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+        btn2 = types.KeyboardButton(str(_("🛑Bekor qilish")))
+        markup.add(btn2)
+        msg = bot.send_message(
+            message.chat.id,
+            "10 belgidan kam bo`lmagan habar yoki media (video/rasm) yuboring!",
+            reply_markup=markup,
+        )
+        bot.register_next_step_handler(msg, send_process)
 
 
 @bot.message_handler(func=lambda message: message.text == str(_("Mening qabulim")))
@@ -609,3 +626,44 @@ def back(call):
         btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
         markup.add(btn1)
     bot.send_message(call.from_user.id, "<b>Bosh menu</b>", reply_markup=markup)
+
+
+def send_process(message):
+    if message.text != "🛑Bekor qilish":
+        letter=Letter.objects.filter(admin_id=ADMIN).first()
+        letter.message_id=message.message_id
+        letter.save()
+        current=letter.current
+        chat_id = message.chat.id
+        users = Patient.objects.all()[current:current+50]
+        if len(users)==0:
+            markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+            btn = types.KeyboardButton("⌛Намоз вақтлари")
+            markup.add(btn)
+            us = len(Patient.objects.all())
+            total = letter.count
+            bot.send_message(int(ADMIN),
+                             message,
+            f"Habar yuborishda yakunlandi:\nJami foydalanuvchilar soni: {us}\nMuvafaqqiyatli yuborilgan habar soni: {total}\nMuvafaqqiyatsiz yuborilgan habar soni: {us - total}",
+                             reply_markup=markup)
+            response = HttpResponse()
+            response.write("<h1>Habar yuborilishi muvofaqqiyatli yakunlandi!</h1>")
+            return response
+        success = 0
+        fail = 0
+        for user in users:
+            user_id = user.user_id
+            try:
+                bot.copy_message(user_id, chat_id, message.message_id)
+                success += 1
+            except ApiTelegramException:
+                fail += 1
+        letter.current=current+50
+        letter.count=letter.count+success
+        letter.save()
+        response = HttpResponse()
+        response.write("<h1>Habar yuborilmoqda!</h1>")
+        return response
+    response = HttpResponse()
+    response.write("<h1>Habar yuborishda hatolik yuz berdi!</h1>")
+    return response

@@ -209,3 +209,11 @@ class Appointment(models.Model):
             }
             send_appointment_to_doctor(data, self.docworkday.doctor.doc_id)
         super().save(*args, **kwargs)
+
+class Letter(models.Model):
+    count = models.IntegerField(default=0)
+    current = models.IntegerField(default=0)
+    message_id = models.BigIntegerField(default=0)
+    admin_id = models.BigIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    active = models.BooleanField(default=False)
