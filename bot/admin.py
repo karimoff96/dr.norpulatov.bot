@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group
 
-from .models import Appointment, Doctor, DocWorkDay, Patient, Time, WeekDay
+from .models import Appointment, Doctor, DocWorkDay, Patient, Time, WeekDay, Letter
 
 # Register your models here.
 admin.site.unregister(Group)
@@ -26,6 +26,7 @@ class PatientAdmin(admin.ModelAdmin):
 
 admin.site.register(Patient, PatientAdmin)
 admin.site.register(WeekDay)
+admin.site.register(Letter)
 class DoctorAdmin(admin.ModelAdmin): # new
      readonly_fields = ['img_preview']
      list_display = ['first_name', 'img_preview']

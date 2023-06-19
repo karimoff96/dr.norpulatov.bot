@@ -629,26 +629,19 @@ def back(call):
 
 
 def send_process(message):
-    if message.text != "🛑Bekor qilish":
-        letter=Letter.objects.filter(admin_id=ADMIN).first()
+    if message.text == "🛑Bekor qilish":
+        Letter.objects.filter(active=True, admin_id=message.from_user.id).delete()
+        markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+        btn = types.KeyboardButton("Button")
+        markup.add(btn)
+        bot.send_message(message.from_user.id, 'Habar yuborish bekor qilindi!', reply_markup=markup)
+    else:
+        letter=Letter.objects.filter(admin_id=ADMIN, active=True).last()
         letter.message_id=message.message_id
         letter.save()
         current=letter.current
         chat_id = message.chat.id
         users = Patient.objects.all()[current:current+50]
-        if len(users)==0:
-            markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-            btn = types.KeyboardButton("⌛Намоз вақтлари")
-            markup.add(btn)
-            us = len(Patient.objects.all())
-            total = letter.count
-            bot.send_message(int(ADMIN),
-                             message,
-            f"Habar yuborishda yakunlandi:\nJami foydalanuvchilar soni: {us}\nMuvafaqqiyatli yuborilgan habar soni: {total}\nMuvafaqqiyatsiz yuborilgan habar soni: {us - total}",
-                             reply_markup=markup)
-            response = HttpResponse()
-            response.write("<h1>Habar yuborilishi muvofaqqiyatli yakunlandi!</h1>")
-            return response
         success = 0
         fail = 0
         for user in users:
@@ -661,9 +654,22 @@ def send_process(message):
         letter.current=current+50
         letter.count=letter.count+success
         letter.save()
+        if letter.current>=len(Patient.objects.all()):
+            markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+            btn = types.KeyboardButton("Button")
+            markup.add(btn)
+            us = len(Patient.objects.all())
+            total = letter.count
+            bot.send_message(int(ADMIN),
+            f"<b><u>Habar yuborishda yakunlandi:</u></b>\n<b>Jami foydalanuvchilar soni:</b> {us}\n<b>Muvafaqqiyatli yuborilgan habar soni:</b> {total}\n<b>Muvafaqqiyatsiz yuborilgan habar soni:</b> {us - total}",
+                             reply_markup=markup)
+            letter.active=False
+            letter.save()
+            response = HttpResponse()
+            response.write("<h1>Habar yuborilishi muvofaqqiyatli yakunlandi!</h1>")
+            return response
+        
         response = HttpResponse()
         response.write("<h1>Habar yuborilmoqda!</h1>")
         return response
-    response = HttpResponse()
-    response.write("<h1>Habar yuborishda hatolik yuz berdi!</h1>")
-    return response
+    

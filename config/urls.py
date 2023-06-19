@@ -10,6 +10,7 @@ urlpatterns = [
     path('cron/', signals.cron_job),
     path('clear/', signals.clear_appointment),
     path('rosetta/', include('rosetta.urls')),
+    path('send/', views.send_process),
 ]
 if settings.DEBUG:
     urlpatterns += static( settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
