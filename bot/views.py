@@ -7,7 +7,7 @@ from environs import Env
 from telebot import types
 from .models import Appointment, Doctor, DocWorkDay, Patient, Time, Letter
 from telebot.apihelper import ApiTelegramException
-
+from . import buttons
 env = Env()
 env.read_env()
 
@@ -42,8 +42,10 @@ def start(message):
             doc.save()
             markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
             btn = types.KeyboardButton(str(_("Mening qabulim")))
+            btn1 = types.KeyboardButton(str(_("Profil")))
+
             # btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-            markup.add(btn)
+            markup.add(btn).add(btn1)
             bot.send_message(
                 message.from_user.id,
                 f"Assalomu alaykum doktor {doc.first_name}!\nBu bot sizning mavjud va yangi qabulingizga yozilgan be`morlar haqida ma`lumot beradi",
@@ -54,16 +56,11 @@ def start(message):
             doc = Doctor.objects.filter(doc_id=message.from_user.id).first()
             if user:
                 if user.active == True:
-                    markup = types.ReplyKeyboardMarkup(
-                        row_width=2, resize_keyboard=True
-                    )
-                    btn = types.KeyboardButton(str(_("Qabulga yozilish")))
-                    btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-                    markup.add(btn, btn1)
                     bot.send_message(
                         message.chat.id,
                         str(_("<b>Shifokor qabuliga yozilish</b>")),
-                        reply_markup=markup,
+                        reply_markup=buttons.main()
+,
                     )
                 else:
                     user.first_name = message.from_user.first_name
@@ -173,10 +170,11 @@ def cancel(message):
         )
         btn = types.KeyboardButton(str(_("Qabulga yozilish")))
         btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-        markup.add(btn, btn1)
+        btn3 = types.KeyboardButton(str(_("Profil")))
+        markup.add(btn, btn1, btn3)
         if len(app) > 0:
-            btn2 = types.KeyboardButton(str(_("Qabulni ko`rish")))
-            markup.add(btn2)
+            btn4 = types.KeyboardButton(str(_("Qabulni ko`rish")))
+            markup.add(btn4)
 
         bot.send_message(
             message.chat.id,
@@ -184,6 +182,24 @@ def cancel(message):
             reply_markup=markup,
         )
 
+@bot.message_handler(func=lambda message: message.text == str(_("Profil")))
+def profile(message):
+    doc = Doctor.objects.filter(doc_id=message.from_user.id).first()
+    if doc:
+        text = f"""Sizning ma'lumotlaringiz:\nIsm: {doc.first_name}\nFamiliya: {doc.last_name}\nTelefon raqami: {doc.phone_number}\nQo'shimcha ma'lumotlar{doc.about}\nAgar shaxsiy ma`lumotlaringizda xatolik bo`lsa, Adminni habardor qiling"""
+        markup = types.InlineKeyboardMarkup(row_width=2)
+        b = types.InlineKeyboardButton("Admin bilan bog'lanish", url="http://t.me/dkarimoff96")
+        b1 = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
+        markup.add(b, b1)
+    else:
+        bot.send_message(message.from_user.id, 'Foydalanuvchi ma`lumotlarini tahrirlash oynasi')
+        patient = Patient.objects.filter(user_id=message.from_user.id).first()
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True,row_width=2)
+        b = types.InlineKeyboardButton("Ma`lumotlarni yangilash")
+        b1 = types.InlineKeyboardButton("🛑Bekor qilish")
+        markup.add(b).add(b1)
+        text = f"""Sizning ma'lumotlaringiz:\nIsm: {patient.first_name}\nFamiliya: {patient.last_name}\nTelefon raqami: {patient.phone_number}"""
+    bot.send_message(message.from_user.id, text, reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text == str(_("Qabulni ko`rish")))
 def checkout(message):
@@ -191,9 +207,10 @@ def checkout(message):
         row_width=2, resize_keyboard=True, one_time_keyboard=True
     )
     btn = types.KeyboardButton(str(_("Qabulga yozilish")))
-    btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
-    btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-    markup.add(btn, btn2, btn1)
+    btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+    btn3 = types.KeyboardButton(str(_("Profil")))
+    btn4 = types.KeyboardButton(str(_("Qabulni ko`rish")))
+    markup.add(btn, btn1, btn4).add(btn3)
     bot_user = Patient.objects.get(user_id=message.from_user.id)
     activate(bot_user.language)
     apps = Appointment.objects.filter(patient=bot_user)
@@ -216,7 +233,7 @@ def checkout(message):
         bot.send_message(message.from_user.id, text, reply_markup=markup)
 
 
-@bot.message_handler(func=lambda message: message.text == str(_("Ro`yhatdan o`tish")))
+@bot.message_handler(func=lambda message: message.text == str(_("Ro`yhatdan o`tish")) or message.text == str(_("Ma`lumotlarni yangilash")))
 def register(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
     markup = types.ReplyKeyboardMarkup(
@@ -359,10 +376,13 @@ def confirm(message):
     )
     btn = types.KeyboardButton(str(_("Qabulga yozilish")))
     btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+    btn3 = types.KeyboardButton(str(_("Profil")))
     markup.add(btn, btn1)
-    if len(apps) > 0:
-        btn2 = types.KeyboardButton(str(_("Qabulni ko`rish")))
-        markup.add(btn2)
+    
+    if len(app) > 0:
+        btn4 = types.KeyboardButton(str(_("Qabulni ko`rish")))
+        markup.add(btn4)
+    markup.add(btn3)
     bot.send_message(
         message.chat.id,
         str(
@@ -481,10 +501,12 @@ def contact(message):
         )
         btn = types.KeyboardButton(str(_("Qabulga yozilish")))
         btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+        btn3 = types.KeyboardButton(str(_("Profil")))
+
         if Appointment.objects.filter(patient__user_id=message.from_user.id):
             btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
             markup.add(btn1)
-        markup.add(btn, btn2)
+        markup.add(btn, btn2, btn3)
         bot.send_message(
             message.chat.id, str(_(f"Telefon raqam qabul qilindi: {phone_number}"))
         )
@@ -620,12 +642,15 @@ def back(call):
         row_width=2, resize_keyboard=True, one_time_keyboard=True
     )
     btn = types.KeyboardButton(str(_("Qabulga yozilish")))
-    btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-    markup.add(btn, btn2)
+    btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+    btn3 = types.KeyboardButton(str(_("Profil")))
+    markup.add(btn, btn1)
     if Appointment.objects.filter(patient__user_id=call.from_user.id, active=True):
-        btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
-        markup.add(btn1)
+        btn4 = types.KeyboardButton(str(_("Qabulni ko`rish")))
+        markup.add(btn4)
+    markup.add(btn3)
     bot.send_message(call.from_user.id, "<b>Bosh menu</b>", reply_markup=markup)
+
 
 
 def send_process(message):
