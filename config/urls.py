@@ -6,7 +6,7 @@ from django.conf.urls.static import static
 from bot import views, signals
 
 urlpatterns = [
-    path('bot/', views.index, name='handler'),
+    path('index/', views.index, name='handler'),
     path('cron/', signals.cron_job),
     path('clear/', signals.clear_appointment),
     path('rosetta/', include('rosetta.urls')),
