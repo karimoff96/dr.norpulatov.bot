@@ -7,7 +7,7 @@ from environs import Env
 from telebot import types
 from .models import Appointment, Doctor, DocWorkDay, Patient, Time, Letter
 from telebot.apihelper import ApiTelegramException
-from . import buttons
+
 env = Env()
 env.read_env()
 
@@ -43,8 +43,6 @@ def start(message):
             markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
             btn = types.KeyboardButton(str(_("Mening qabulim")))
             btn1 = types.KeyboardButton(str(_("Profil")))
-
-            # btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
             markup.add(btn).add(btn1)
             bot.send_message(
                 message.from_user.id,
@@ -56,11 +54,17 @@ def start(message):
             doc = Doctor.objects.filter(doc_id=message.from_user.id).first()
             if user:
                 if user.active == True:
+                    markup = types.ReplyKeyboardMarkup(
+                        row_width=2, resize_keyboard=True
+                    )
+                    btn = types.KeyboardButton(str(_("Qabulga yozilish")))
+                    btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+                    btn2 = types.KeyboardButton(str(_("Profil")))
+                    markup.add(btn, btn1, btn2)
                     bot.send_message(
                         message.chat.id,
                         str(_("<b>Shifokor qabuliga yozilish</b>")),
-                        reply_markup=buttons.main()
-,
+                        reply_markup=markup,
                     )
                 else:
                     user.first_name = message.from_user.first_name
@@ -102,7 +106,7 @@ def start(message):
                 b1 = types.InlineKeyboardButton("Кирилл", callback_data="ru")
                 markup.add(b, b1)
                 bot.send_message(message.chat.id, text, reply_markup=markup)
-    elif message.text == "/send" and message.from_user.id==ADMIN:
+    elif message.text == "/send" and message.from_user.id == ADMIN:
         Letter.objects.create(admin_id=ADMIN, active=True)
         markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
         btn2 = types.KeyboardButton(str(_("🛑Bekor qilish")))
@@ -182,24 +186,30 @@ def cancel(message):
             reply_markup=markup,
         )
 
+
 @bot.message_handler(func=lambda message: message.text == str(_("Profil")))
 def profile(message):
     doc = Doctor.objects.filter(doc_id=message.from_user.id).first()
     if doc:
         text = f"""Sizning ma'lumotlaringiz:\nIsm: {doc.first_name}\nFamiliya: {doc.last_name}\nTelefon raqami: {doc.phone_number}\nQo'shimcha ma'lumotlar{doc.about}\nAgar shaxsiy ma`lumotlaringizda xatolik bo`lsa, Adminni habardor qiling"""
         markup = types.InlineKeyboardMarkup(row_width=2)
-        b = types.InlineKeyboardButton("Admin bilan bog'lanish", url="http://t.me/dkarimoff96")
+        b = types.InlineKeyboardButton(
+            "Admin bilan bog'lanish", url="http://t.me/dkarimoff96"
+        )
         b1 = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
         markup.add(b, b1)
     else:
-        bot.send_message(message.from_user.id, 'Foydalanuvchi ma`lumotlarini tahrirlash oynasi')
+        bot.send_message(
+            message.from_user.id, "Foydalanuvchi ma`lumotlarini tahrirlash oynasi"
+        )
         patient = Patient.objects.filter(user_id=message.from_user.id).first()
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True,row_width=2)
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
         b = types.InlineKeyboardButton("Ma`lumotlarni yangilash")
         b1 = types.InlineKeyboardButton("🛑Bekor qilish")
         markup.add(b).add(b1)
         text = f"""Sizning ma'lumotlaringiz:\nIsm: {patient.first_name}\nFamiliya: {patient.last_name}\nTelefon raqami: {patient.phone_number}"""
     bot.send_message(message.from_user.id, text, reply_markup=markup)
+
 
 @bot.message_handler(func=lambda message: message.text == str(_("Qabulni ko`rish")))
 def checkout(message):
@@ -233,7 +243,10 @@ def checkout(message):
         bot.send_message(message.from_user.id, text, reply_markup=markup)
 
 
-@bot.message_handler(func=lambda message: message.text == str(_("Ro`yhatdan o`tish")) or message.text == str(_("Ma`lumotlarni yangilash")))
+@bot.message_handler(
+    func=lambda message: message.text == str(_("Ro`yhatdan o`tish"))
+    or message.text == str(_("Ma`lumotlarni yangilash"))
+)
 def register(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
     markup = types.ReplyKeyboardMarkup(
@@ -378,7 +391,7 @@ def confirm(message):
     btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
     btn3 = types.KeyboardButton(str(_("Profil")))
     markup.add(btn, btn1)
-    
+
     if len(app) > 0:
         btn4 = types.KeyboardButton(str(_("Qabulni ko`rish")))
         markup.add(btn4)
@@ -525,6 +538,7 @@ def handle_callback_query(call):
     docworkdays = DocWorkDay.objects.filter(doctor__pk=doc_id)
     markup = types.InlineKeyboardMarkup(row_width=2)
     row_buttons = []
+
     for docworkday in docworkdays:
         times = docworkday.times.all()
         for time in times:
@@ -538,11 +552,13 @@ def handle_callback_query(call):
                 if len(row_buttons) == 2:
                     markup.add(*row_buttons)
                 break
-    text = f"<i>{Doctor.objects.get(id=doc_id).about}</i>"
-    if len(row_buttons) == 1:
-        markup.add(row_buttons[0])
-    elif len(row_buttons) == 0:
+
+    text = f"<i>Shifokor: {Doctor.objects.get(id=doc_id).about}</i>"
+    if len(row_buttons) == 0:
         text = "<i>Shifokorning qabul qilish vaqtlari mavjud emas</i>"
+    elif len(row_buttons) == 1:
+        text = f"<i>Shifokor: {Doctor.objects.get(id=doc_id).about}</i>"
+        markup.add(row_buttons[0])
 
     back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
     markup.add(back)
@@ -585,7 +601,6 @@ def handle_callback_query(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("time|"))
 def handle_callback_query(call):
     global extra_datas
-    print(extra_datas)
     extra_datas[call.from_user.id]["time_id"] = call.data.split("|")[1]
     extra_datas[call.from_user.id]["day_id"] = int(call.data.split("|")[2])
     weekday = DocWorkDay.objects.filter(
@@ -652,21 +667,22 @@ def back(call):
     bot.send_message(call.from_user.id, "<b>Bosh menu</b>", reply_markup=markup)
 
 
-
 def send_process(message):
     if message.text == "🛑Bekor qilish":
         Letter.objects.filter(active=True, admin_id=message.from_user.id).delete()
         markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
         btn = types.KeyboardButton("Button")
         markup.add(btn)
-        bot.send_message(message.from_user.id, 'Habar yuborish bekor qilindi!', reply_markup=markup)
+        bot.send_message(
+            message.from_user.id, "Habar yuborish bekor qilindi!", reply_markup=markup
+        )
     else:
-        letter=Letter.objects.filter(admin_id=ADMIN, active=True).last()
-        letter.message_id=message.message_id
+        letter = Letter.objects.filter(admin_id=ADMIN, active=True).last()
+        letter.message_id = message.message_id
         letter.save()
-        current=letter.current
+        current = letter.current
         chat_id = message.chat.id
-        users = Patient.objects.all()[current:current+50]
+        users = Patient.objects.all()[current : current + 50]
         success = 0
         fail = 0
         for user in users:
@@ -676,25 +692,26 @@ def send_process(message):
                 success += 1
             except ApiTelegramException:
                 fail += 1
-        letter.current=current+50
-        letter.count=letter.count+success
+        letter.current = current + 50
+        letter.count = letter.count + success
         letter.save()
-        if letter.current>=len(Patient.objects.all()):
+        if letter.current >= len(Patient.objects.all()):
             markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
             btn = types.KeyboardButton("Button")
             markup.add(btn)
             us = len(Patient.objects.all())
             total = letter.count
-            bot.send_message(int(ADMIN),
-            f"<b><u>Habar yuborishda yakunlandi:</u></b>\n<b>Jami foydalanuvchilar soni:</b> {us}\n<b>Muvafaqqiyatli yuborilgan habar soni:</b> {total}\n<b>Muvafaqqiyatsiz yuborilgan habar soni:</b> {us - total}",
-                             reply_markup=markup)
-            letter.active=False
+            bot.send_message(
+                int(ADMIN),
+                f"<b><u>Habar yuborishda yakunlandi:</u></b>\n<b>Jami foydalanuvchilar soni:</b> {us}\n<b>Muvafaqqiyatli yuborilgan habar soni:</b> {total}\n<b>Muvafaqqiyatsiz yuborilgan habar soni:</b> {us - total}",
+                reply_markup=markup,
+            )
+            letter.active = False
             letter.save()
             response = HttpResponse()
             response.write("<h1>Habar yuborilishi muvofaqqiyatli yakunlandi!</h1>")
             return response
-        
+
         response = HttpResponse()
         response.write("<h1>Habar yuborilmoqda!</h1>")
         return response
-    
