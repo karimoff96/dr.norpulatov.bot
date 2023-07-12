@@ -5,7 +5,6 @@ import segno
 from django.utils.html import mark_safe
 import uuid
 
-
 class WeekDay(models.Model):
     weekdays = (
         ("Dushanba", "Dushanba"),
@@ -94,7 +93,11 @@ class DocWorkDay(models.Model):
             raise ValidationError(
                 f"Doc work day with this Doctor and Day already exists. Change the existing day`s times instead!"
             )
-
+    def clean(self):
+       if  len(self.doctor) == 0 or len(self.day)==0:
+           
+           raise ValidationError(
+               {'doctor': "Doktorni tanlang", 'day': "Kunni tanlang"})
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["doctor", "day"], name="unique_doctor_day")
