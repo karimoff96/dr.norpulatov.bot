@@ -5,9 +5,10 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from environs import Env
 from telebot import types
-from .models import Appointment, Doctor, DocWorkDay, Patient, Time, Letter
+from .models import Appointment, Doctor, Patient, Letter, Specialization
 from telebot.apihelper import ApiTelegramException
-
+import datetime
+from telebot.types import CallbackQuery
 env = Env()
 env.read_env()
 
@@ -84,7 +85,7 @@ def start(message):
             elif doc:
                 markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
                 btn = types.KeyboardButton(str(_("Mening qabulim")))
-                # btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+                btn1 = types.KeyboardButton(str(_("Tezkor Aloqa")))
                 markup.add(btn)
                 bot.send_message(
                     message.from_user.id,
@@ -420,16 +421,14 @@ def confirm(message):
 
 @bot.message_handler(func=lambda message: message.text == str(_("Qabulga yozilish")))
 def make_appointment(message):
+    fields = Specialization.objects.all()
+    markup = types.InlineKeyboardMarkup(row_width=2)
     global extra_datas
     extra_datas[message.from_user.id] = {}
-    bot_user = Patient.objects.get(user_id=message.from_user.id)
-    activate(bot_user.language)
-    doctors = Doctor.objects.filter(active=True)
-    markup = types.InlineKeyboardMarkup(row_width=2)
     row_buttons = []
-    for doc in doctors:
+    for field in fields:
         button = types.InlineKeyboardButton(
-            doc.first_name, callback_data=f"doctor|{doc.id}"
+            field.name, callback_data=f"field|{field.id}"
         )
         row_buttons.append(button)
         if len(row_buttons) == 2:
@@ -439,7 +438,7 @@ def make_appointment(message):
     if len(row_buttons) == 1:
         markup.add(row_buttons[0])
 
-    back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
+    back = types.InlineKeyboardButton("🛑 Бекор қилиш", callback_data="back")
     markup.add(back)
 
     bot.send_message(
@@ -451,7 +450,192 @@ def make_appointment(message):
         ),
         reply_markup=markup,
     )
+@bot.callback_query_handler(func=lambda call: call.data.startswith("field|"))
+def handle_callback_query(call):
+    bot.delete_message(call.from_user.id, call.message.message_id)
+    global extra_datas
+    field_id = call.data.split("|")[1]
+    extra_datas[call.from_user.id]["field_id"] = field_id
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    row_buttons = []
+    field = Specialization.objects.get(id=field_id)
+    doctors = Doctor.objects.filter(specialization__id=field_id)
+    for doctor in doctors:
+        button = types.InlineKeyboardButton(
+            doctor.first_name, callback_data=f"doc|{doctor.id}"
+        )
+        row_buttons.append(button)
+        if len(row_buttons) == 2:
+            markup.add(*row_buttons)
+            row_buttons = []
 
+    if len(row_buttons) == 1:
+        markup.add(row_buttons[0])
+
+    back = types.InlineKeyboardButton("🛑 Бекор қилиш", callback_data="back")
+    markup.add(back)
+    bot.send_message(
+        call.from_user.id,
+        "field.description",
+        reply_markup=markup,
+    )
+@bot.callback_query_handler(func=lambda call: call.data.startswith("doc|"))
+def handle_callback_query(call: CallbackQuery):
+    bot.delete_message(call.from_user.id, call.message.message_id)
+
+    global extra_datas
+    doc_id = call.data.split("|")[1]
+    extra_datas[call.from_user.id]["doctor_id"] = doc_id
+    doc = Doctor.objects.get(id=doc_id)
+    calendar, step = DetailedTelegramCalendar().build()
+    photo_message = bot.send_photo(
+        call.from_user.id, doc.image, caption=doc.information
+    )
+
+    extra_datas[call.from_user.id]["photo_message_id"] = photo_message.message_id
+    # Second, send the caption and the calendar as a new message
+    bot.send_message(call.from_user.id, "Қабул кунини танланг:", reply_markup=calendar)
+
+
+@bot.callback_query_handler(func=DetailedTelegramCalendar.func())
+def cal(c: CallbackQuery):
+    result, key, step = DetailedTelegramCalendar().process(c.data)
+    if not result and key:
+        bot.edit_message_text(
+            f"Tanlang {LSTEP[step]}",
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=key,
+        )
+    elif result:
+        global extra_datas
+        extra_datas[c.from_user.id]["date"] = result
+        extra_datas[c.from_user.id]["callback_query_id"] = c.id
+        show_available_times(c.from_user.id, c.message.chat.id, c.message.message_id)
+
+
+def show_available_times(user_id, chat_id, message_id):
+    global extra_datas
+    day = extra_datas[user_id]["date"].weekday()
+    selected_date = extra_datas[user_id]["date"]
+    available_times_weekday = [
+        "08:00",
+        "08:20",
+        "08:40",
+        "09:00",
+        "09:20",
+        "09:40",
+        "10:00",
+        "10:20",
+        "10:40",
+        "11:00",
+        "11:20",
+        "12:40",
+        "13:00",
+        "13:40",
+        "14:00",
+        "14:20",
+        "14:40",
+        "15:00",
+        "15:20",
+        "15:40",
+        "16:00",
+    ]
+    available_times_saturday = [
+        "08:00",
+        "08:20",
+        "08:40",
+        "09:00",
+        "09:20",
+        "09:40",
+        "10:00",
+        "10:20",
+        "10:40",
+        "11:00",
+        "11:20",
+        "12:40",
+        "13:00",
+    ]
+
+    if day == 5:  # Saturday (0 is Monday, 1 is Tuesday, ..., 5 is Saturday)
+        available_times = available_times_saturday
+    else:
+        available_times = available_times_weekday
+
+    app = (
+        Appointment.objects.filter(
+            app_date=extra_datas[user_id]["date"].strftime("%Y-%m-%d"),
+            doctor__id=extra_datas[user_id]["doctor_id"],
+        )
+        .values_list("app_time", flat=True)
+        .distinct()
+    )
+
+    current_time = (datetime.datetime.now() + datetime.timedelta(hours=5)).strftime(
+        "%H:%M"
+    )
+    booked_times = [time.strftime("%H:%M") for time in app]
+    available_times = [time for time in available_times if time not in booked_times]
+    if selected_date == datetime.datetime.now().date():
+        available_times = [time for time in available_times if time >= current_time]
+
+    markup = types.InlineKeyboardMarkup(row_width=3)
+    buttons = [
+        types.InlineKeyboardButton(time, callback_data=f"time|{time}")
+        for time in available_times
+    ]
+    back = types.InlineKeyboardButton("🛑 Бекор қилиш", callback_data="back")
+    markup.add(*buttons)
+    markup.add(back)
+    doc = Doctor.objects.get(id=extra_datas[user_id]["doctor_id"])
+    if not buttons:
+        bot.answer_callback_query(
+            callback_query_id=extra_datas[user_id]["callback_query_id"],
+            text=f"Кечирасиз! Ушбу кун учун шифокор {doc.first_name} {doc.last_name}нинг бўш вақтлари топилмади",
+            show_alert=True,
+        )
+    else:
+        photo_message_id = extra_datas[user_id]["photo_message_id"]
+        bot.delete_message(chat_id, photo_message_id)
+        bot.edit_message_text(
+            text="Мавжуд вақтни танланг:",
+            chat_id=chat_id,
+            message_id=message_id,
+            reply_markup=markup,
+        )
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("time|"))
+def call_data(call: CallbackQuery):
+    bot.delete_message(call.from_user.id, call.message.message_id)
+
+    time = call.data.split("|")[1]
+    global extra_datas
+    extra_datas[call.from_user.id]["time"] = time
+    user = Patient.objects.get(user_id=call.from_user.id)
+    doctor = Doctor.objects.get(id=extra_datas[call.from_user.id]["doctor_id"])
+    app = Appointment.objects.create(
+        doctor=doctor,
+        patient=user,
+        app_date=extra_datas[call.from_user.id]["date"],
+        app_time=datetime.datetime.strptime(
+            extra_datas[call.from_user.id]["time"], "%H:%M"
+        ).time(),
+        active=True,
+        type="bot",
+    )
+    markup = types.ReplyKeyboardMarkup(
+        row_width=2, resize_keyboard=True, one_time_keyboard=True
+    )
+    btn = types.KeyboardButton("🧾 Қабулга ёзилиш")
+    btn3 = types.KeyboardButton("👤 Профиль")
+    if Appointment.objects.filter(patient__user_id=call.from_user.id, active=True):
+        btn4 = types.KeyboardButton("🔰 Қабулни кўриш")
+        markup.add(btn, btn4, btn3)
+    else:
+        markup.add(btn).add(btn3)
+    text = f"""✅ Аризангиз қабул қилинди!\n❇️ Ариза тартиб рақами: №{app.id}\n🙍‍♂️ Беъмор: {app.patient.first_name} {app.patient.last_name}\n👨‍⚕️ Масъул шифокор: {app.doctor.first_name} {app.doctor.last_name}\n📅 Қабул куни: {extra_datas[call.from_user.id]['date']}\n🕔 Қабул соати: {extra_datas[call.from_user.id]['time']}\n🔰 Яратилган вақти {(app.created+datetime.timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")}"""
+    bot.send_message(call.from_user.id, text, reply_markup=markup)
 
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
@@ -530,106 +714,106 @@ def contact(message):
         )
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("doctor|"))
-def handle_callback_query(call):
-    global extra_datas
-    doc_id = call.data.split("|")[1]
-    extra_datas[call.from_user.id]["doctor_id"] = doc_id
-    docworkdays = DocWorkDay.objects.filter(doctor__pk=doc_id)
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    row_buttons = []
+# @bot.callback_query_handler(func=lambda call: call.data.startswith("doctor|"))
+# def handle_callback_query(call):
+#     global extra_datas
+#     doc_id = call.data.split("|")[1]
+#     extra_datas[call.from_user.id]["doctor_id"] = doc_id
+#     docworkdays = DocWorkDay.objects.filter(doctor__pk=doc_id)
+#     markup = types.InlineKeyboardMarkup(row_width=2)
+#     row_buttons = []
 
-    for docworkday in docworkdays:
-        times = docworkday.times.all()
-        for time in times:
-            if not Appointment.objects.filter(
-                docworkday=docworkday, time=time, active=True
-            ).exists():
-                button = types.InlineKeyboardButton(
-                    docworkday.day.week_day, callback_data=f"day|{docworkday.id}"
-                )
-                row_buttons.append(button)
-                if len(row_buttons) == 2:
-                    markup.add(*row_buttons)
-                break
+#     for docworkday in docworkdays:
+#         times = docworkday.times.all()
+#         for time in times:
+#             if not Appointment.objects.filter(
+#                 docworkday=docworkday, time=time, active=True
+#             ).exists():
+#                 button = types.InlineKeyboardButton(
+#                     docworkday.day.week_day, callback_data=f"day|{docworkday.id}"
+#                 )
+#                 row_buttons.append(button)
+#                 if len(row_buttons) == 2:
+#                     markup.add(*row_buttons)
+#                 break
 
-    text = f"<i>Shifokor: {Doctor.objects.get(id=doc_id).about}</i>"
-    if len(row_buttons) == 0:
-        text = "<i>Shifokorning qabul qilish vaqtlari mavjud emas</i>"
-    elif len(row_buttons) == 1:
-        text = f"<i>Shifokor: {Doctor.objects.get(id=doc_id).about}</i>"
-        markup.add(row_buttons[0])
+#     text = f"<i>Shifokor: {Doctor.objects.get(id=doc_id).about}</i>"
+#     if len(row_buttons) == 0:
+#         text = "<i>Shifokorning qabul qilish vaqtlari mavjud emas</i>"
+#     elif len(row_buttons) == 1:
+#         text = f"<i>Shifokor: {Doctor.objects.get(id=doc_id).about}</i>"
+#         markup.add(row_buttons[0])
 
-    back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
-    markup.add(back)
-    bot.delete_message(call.from_user.id, message_id=call.message.message_id)
-    bot.send_message(call.from_user.id, text, reply_markup=markup)
-
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("day|"))
-def handle_callback_query(call):
-    day_id = call.data.split("|")[1]
-    weekday = DocWorkDay.objects.filter(pk=day_id).first()
-    times: list[Time] = weekday.times.all()
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    row_buttons = []
-    for time in times:
-        if Appointment.objects.filter(
-            docworkday_id=day_id, time=time, active=True
-        ).exists():
-            continue
-        button = types.InlineKeyboardButton(
-            time.start_time.strftime("%H:%M"), callback_data=f"time|{time.id}|{day_id}"
-        )
-        row_buttons.append(button)
-        if len(row_buttons) == 2:
-            markup.add(*row_buttons)
-            row_buttons = []
-    if len(row_buttons) == 1:
-        markup.add(row_buttons[0])
-    back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
-    markup.add(back)
-    bot.delete_message(call.from_user.id, message_id=call.message.message_id)
-
-    bot.send_message(
-        call.from_user.id,
-        "<i>Mavjud vaqtlardan birini tanlang</i>",
-        reply_markup=markup,
-    )
+#     back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
+#     markup.add(back)
+#     bot.delete_message(call.from_user.id, message_id=call.message.message_id)
+#     bot.send_message(call.from_user.id, text, reply_markup=markup)
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("time|"))
-def handle_callback_query(call):
-    global extra_datas
-    extra_datas[call.from_user.id]["time_id"] = call.data.split("|")[1]
-    extra_datas[call.from_user.id]["day_id"] = int(call.data.split("|")[2])
-    weekday = DocWorkDay.objects.filter(
-        pk=extra_datas[call.from_user.id]["day_id"]
-    ).first()
-    markup = types.InlineKeyboardMarkup(row_width=2)
+# @bot.callback_query_handler(func=lambda call: call.data.startswith("day|"))
+# def handle_callback_query(call):
+#     day_id = call.data.split("|")[1]
+#     weekday = DocWorkDay.objects.filter(pk=day_id).first()
+#     times: list[Time] = weekday.times.all()
+#     markup = types.InlineKeyboardMarkup(row_width=2)
+#     row_buttons = []
+#     for time in times:
+#         if Appointment.objects.filter(
+#             docworkday_id=day_id, time=time, active=True
+#         ).exists():
+#             continue
+#         button = types.InlineKeyboardButton(
+#             time.start_time.strftime("%H:%M"), callback_data=f"time|{time.id}|{day_id}"
+#         )
+#         row_buttons.append(button)
+#         if len(row_buttons) == 2:
+#             markup.add(*row_buttons)
+#             row_buttons = []
+#     if len(row_buttons) == 1:
+#         markup.add(row_buttons[0])
+#     back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
+#     markup.add(back)
+#     bot.delete_message(call.from_user.id, message_id=call.message.message_id)
 
-    back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
-    markup.add(back)
-    bot.delete_message(call.from_user.id, message_id=call.message.message_id)
-    time = Time.objects.filter(id=extra_datas[call.from_user.id]["time_id"])[0]
+#     bot.send_message(
+#         call.from_user.id,
+#         "<i>Mavjud vaqtlardan birini tanlang</i>",
+#         reply_markup=markup,
+#     )
 
-    patient = Patient.objects.filter(user_id=call.from_user.id)[0]
-    app = Appointment.objects.create(
-        patient=patient, docworkday=weekday, time=time, type="bot"
-    )
-    bot.send_message(
-        CHANNEL,
-        f"<b>Shifokor qabuliga yozilgan be'mor ma'lumotlari:\nAriza tartib raqami: <i>{app.id}</i>\nIsmi: <i>{patient.first_name}</i>\nFamiliyasi: <i>{patient.last_name}</i>\n{f'Telegram: @{patient.username}' if patient.username else ''}\nMas'ul shifokor: <i>{weekday.doctor.first_name}</i>\nQabul kuni: <i>{weekday.day.week_day}</i>\nQabul vaqti: <i>{time.start_time.strftime('%H:%M')}</i></b>",
-    )
-    text = f"<b>Siz <i>{weekday.day.week_day}</i> kuni\nSoat <i>{time.start_time.strftime('%H:%M')}</i> da \nDoktor <i>{weekday.doctor.first_name}</i> qabuliga ro`yhatga olindingiz</b>"
-    markup = types.ReplyKeyboardMarkup(
-        row_width=2, resize_keyboard=True, one_time_keyboard=True
-    )
-    btn = types.KeyboardButton(str(_("Qabulga yozilish")))
-    btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
-    btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
-    markup.add(btn, btn2, btn1)
-    bot.send_message(call.from_user.id, text, reply_markup=markup)
+
+# @bot.callback_query_handler(func=lambda call: call.data.startswith("time|"))
+# def handle_callback_query(call):
+#     global extra_datas
+#     extra_datas[call.from_user.id]["time_id"] = call.data.split("|")[1]
+#     extra_datas[call.from_user.id]["day_id"] = int(call.data.split("|")[2])
+#     weekday = DocWorkDay.objects.filter(
+#         pk=extra_datas[call.from_user.id]["day_id"]
+#     ).first()
+#     markup = types.InlineKeyboardMarkup(row_width=2)
+
+#     back = types.InlineKeyboardButton("🛑Bekor qilish", callback_data="back")
+#     markup.add(back)
+#     bot.delete_message(call.from_user.id, message_id=call.message.message_id)
+#     time = Time.objects.filter(id=extra_datas[call.from_user.id]["time_id"])[0]
+
+#     patient = Patient.objects.filter(user_id=call.from_user.id)[0]
+#     app = Appointment.objects.create(
+#         patient=patient, docworkday=weekday, time=time, type="bot"
+#     )
+#     bot.send_message(
+#         CHANNEL,
+#         f"<b>Shifokor qabuliga yozilgan be'mor ma'lumotlari:\nAriza tartib raqami: <i>{app.id}</i>\nIsmi: <i>{patient.first_name}</i>\nFamiliyasi: <i>{patient.last_name}</i>\n{f'Telegram: @{patient.username}' if patient.username else ''}\nMas'ul shifokor: <i>{weekday.doctor.first_name}</i>\nQabul kuni: <i>{weekday.day.week_day}</i>\nQabul vaqti: <i>{time.start_time.strftime('%H:%M')}</i></b>",
+#     )
+#     text = f"<b>Siz <i>{weekday.day.week_day}</i> kuni\nSoat <i>{time.start_time.strftime('%H:%M')}</i> da \nDoktor <i>{weekday.doctor.first_name}</i> qabuliga ro`yhatga olindingiz</b>"
+#     markup = types.ReplyKeyboardMarkup(
+#         row_width=2, resize_keyboard=True, one_time_keyboard=True
+#     )
+#     btn = types.KeyboardButton(str(_("Qabulga yozilish")))
+#     btn1 = types.KeyboardButton(str(_("Qabulni ko`rish")))
+#     btn2 = types.KeyboardButton(str(_("Tezkor Aloqa")))
+#     markup.add(btn, btn2, btn1)
+#     bot.send_message(call.from_user.id, text, reply_markup=markup)
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "en" or call.data == "ru")

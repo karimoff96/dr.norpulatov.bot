@@ -1,12 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group
 
-from .models import Appointment, Doctor, DocWorkDay, Patient, Time, WeekDay, Letter
+from .models import Appointment, Doctor, Patient, Letter, Specialization
 
 # Register your models here.
 admin.site.unregister(Group)
-
-admin.site.register(Time)
 
 
 class PatientAdmin(admin.ModelAdmin):
@@ -14,7 +12,6 @@ class PatientAdmin(admin.ModelAdmin):
         "first_name",
         "last_name",
         "phone_number",
-        "created_at",
         "active",
         "source",
     )
@@ -27,7 +24,6 @@ class PatientAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Patient, PatientAdmin)
-admin.site.register(WeekDay)
 
 
 class LetterAdmin(admin.ModelAdmin):
@@ -37,37 +33,45 @@ class LetterAdmin(admin.ModelAdmin):
 admin.site.register(Letter, LetterAdmin)
 
 
-class DoctorAdmin(admin.ModelAdmin):  # new
-    readonly_fields = ["img_preview"]
-    list_display = ["first_name", "last_name", "phone_number", "img_preview"]
+class DoctorAdmin(admin.ModelAdmin):
+    list_display = (
+        "first_name",
+        "last_name",
+        "phone_number",
+        "about",
+        "image",
+        "created",
+        "modified",
+    )
+    list_display_links = ("last_name", "first_name")
 
 
+class SpecializationAdmin(admin.ModelAdmin):
+    list_display = ("name", "description")
+
+
+admin.site.register(Specialization, SpecializationAdmin)
 admin.site.register(Doctor, DoctorAdmin)
 
 
-class DocWorkDayAdmin(admin.ModelAdmin):
-    list_display = ("doctor", "day")
-
-
-admin.site.register(DocWorkDay, DocWorkDayAdmin)
-
 from django.contrib import admin
-from .forms import AppointmentForm
-from .models import Appointment, DocWorkDay
+from .models import Appointment
 
 
 class AppointmentAdmin(admin.ModelAdmin):
     list_display = (
+        "doctor",
         "patient",
+        "name",
+        "app_date",
+        "app_time",
+        "type",
+        "created",
+        "modified",
         "complaint",
-        "urgent",
-        "created_at",
         "active",
-        "time",
-        "docworkday",
     )
-    list_editable = ("active",)
-    list_filter = ("urgent", "active", "created_at")
+    list_display_links = ("doctor", "patient", "name")
 
 
 admin.site.register(Appointment, AppointmentAdmin)
