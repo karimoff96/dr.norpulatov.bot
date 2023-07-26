@@ -105,6 +105,7 @@ class Appointment(TimeStampedModel, models.Model):
         blank=True, verbose_name=_("Shikoyat, qo'shimcha ma'lumot")
     )
     active = models.BooleanField(default=False)
+    urgent = models.BooleanField(default=False)
 
     def __str__(self) -> str:
         return f"{self.doctor.first_name}-{self.name}-{self.app_date}"
