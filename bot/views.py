@@ -204,14 +204,14 @@ def profile(message):
         markup.add(b, b1)
     else:
         bot.send_message(
-            message.from_user.id, "Foydalanuvchi ma`lumotlarini tahrirlash oynasi"
+            message.from_user.id, "Фойдаланувчи маълумотларини таҳрирлаш ойнаси"
         )
         patient = Patient.objects.filter(user_id=message.from_user.id).first()
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
         b = types.InlineKeyboardButton("♻️ Маълумотларни янгилаш")
         b1 = types.InlineKeyboardButton("🛑 Бекор қилиш")
         markup.add(b).add(b1)
-        text = f"""Sizning ma'lumotlaringiz:\nIsm: {patient.first_name}\nFamiliya: {patient.last_name}\nTelefon raqami: {patient.phone_number}"""
+        text = f"""Сизнинг маълумотларингиз:\nИсм: {patient.first_name}\nФамилия: {patient.last_name}\nТелефон рақами: {patient.phone_number}"""
     bot.send_message(message.from_user.id, text, reply_markup=markup)
 
 
@@ -267,38 +267,29 @@ def emergency(message):
     extra_datas[message.from_user.id] = {}
     text = str(
         _(
-            """Siz Тезкор Алоқа qismida siz quyidagi muammolar bo‘yicha bizdan shoshilinch onlayn konsultasiya olishingiz mumkin.\n
-🔻Qon bosimini oshishi
-🔻Qon bosimi pasayib ketishi
-🔻Qon bosimini ko‘tarilib, tushib ketishi
-🔻Buyrakdagi muammolar (shamollash, diabetik nefropatiya, buyrak yetishmochiligi)
-🔻Nafas olish sistemasidagi muammolar
-🔻Xansirash
-🔻Nafas yetishmasligi
-🔻Surunkali bronxit
-🔻Pnevmoniya
-🔻XOBL
-🔻Branxial astma
-🔻Kandli diabet 2-tip
-🔻Diabetiklar uchun individual programma( ovkatlanish tartibi, nimalar iste'mol qilish mumkin emas, qanday jismoniy faollik samarali)
-🔻Oyoqda muzlash,shish va og'riqlar POLINEYROPATIYa, oyok aretriyalarida stenozlar, diabetik to‘piq
-🔻Qon suyultirish usullari
-🔻Yurak soxasida ogriklar bo‘lsa
-🔻Yurak tez urib ketishi
-🔻Tomoqqa biror narsa tiqilganlik xissi
-🔻Yurak notekis urushi
-🔻Ulim xissini paydo bo'lishi
-🔻Yurakni sekin urushi
-🔻Surunkali yurak yetishmovchligi
-🔻Surunkali charchok xissi
-🔻Anemiya (kam qonlik)
-🔻Buqoq bezi faoliyatini buzulishi (gipotirioz, gipertirioz)
-🔻Oshqozon ichak sistemasidagi muammolar
-🔻Qorinni dam bulishi
-🔻Ovqat xazm qilishda qiynalish Zarda bo'lish
-🔻Ertalab uyg'onganda og'izda achchik ta'm bo'lishi
-🔻Ich kelish qiyinlashishi
-📌PREPARATLAR XAQIDA MALUMOT OLISH VA PREPARAT TO'G'RI TANLASH."""
+            """Сиз Тезкор Алоқа қисмида сиз қуйидаги муаммолар бўйича биздан шошилинч онлайн консультасия олишингиз мумкин.\n
+🔻Қон босимини ошиши
+🔻Қон босими пасайиб кетиши
+🔻Қон босимини кўтарилиб, тушиб кетиши
+🔻Буйракдаги муаммолар (шамоллаш, диабетик нефропатия, буйрак етишмочилиги)
+🔻Нафас олиш системасидаги муаммолар
+🔻Диабетиклар учун индивидуал программа( овкатланиш тартиби, нималар истеъмол қилиш мумкин эмас, қандай жисмоний фаоллик самарали)
+🔻Оёқда музлаш,шиш ва оғриқлар ПОЛИНЕЙРОПАТИЯ, оёк аретрияларида стенозлар, диабетик тўпиқ
+🔻Қон суюлтириш усуллари
+🔻Юрак сохасида огриклар бўлса
+🔻Юрак тез уриб кетиши
+🔻Томоққа бирор нарса тиқилганлик хисси
+🔻Юрак нотекис уруши
+🔻Ўлим хиссини пайдо бўлиши
+🔻Юракни секин уруши
+🔻Сурункали юрак етишмовчлиги
+🔻Сурункали чарчок хисси
+🔻Буқоқ бези фаолиятини бузулиши (гипотириоз, гипертириоз)
+🔻Ошқозон ичак системасидаги муаммолар
+🔻Овқат хазм қилишда қийналиш Зарда бўлиш
+🔻Эрталаб уйғонганда оғизда аччик таъм бўлиши
+🔻Ич келиш қийинлашиши
+📌ПРЕПАРАТЛАР ХАҚИДА МАЛУМОТ ОЛИШ ВА ПРЕПАРАТ ТЎҒРИ ТАНЛАШ."""
         )
     )
     bot_user = Patient.objects.get(user_id=message.from_user.id)
@@ -344,7 +335,7 @@ def make_complaint(message):
     markup.add(btn2)
     bot.send_message(
         message.from_user.id,
-        str(_("<i>Shikoyat matnini kiriting:</i>")),
+        str(_("<i>Шикоят матнини киритинг:</i>")),
         reply_markup=markup,
     )
 
@@ -400,7 +391,7 @@ def confirm(message):
         message.chat.id,
         str(
             _(
-                "<b><i>Tezkor arizangiz adminlarga yuborildi va tez orada hodimlarimiz siz bilan bog`lanishadi.</i></b>"
+                "<b><i>Тезкор аризангиз админларга юборилди ва тез орада ҳодимларимиз сиз билан боғланишади.</i></b>"
             )
         ),
         reply_markup=markup,
@@ -413,7 +404,7 @@ def confirm(message):
     bot.send_message(CHANNEL, text)
     bot.send_message(
         message.chat.id,
-        str(_("<b>Shifokor qabuliga yozilish</b>")),
+        str(_("<b>Шифокор қабулига ёзилиш</b>")),
         reply_markup=markup,
     )
 
@@ -439,12 +430,12 @@ def make_appointment(message):
 
     back = types.InlineKeyboardButton("🛑 Бекор қилиш", callback_data="back")
     markup.add(back)
-    bot.send_message(message.chat.id, "Qoshimcha malumot", reply_markup=types.ReplyKeyboardRemove())
+    bot.send_message(message.chat.id, "Қошимча малумот", reply_markup=types.ReplyKeyboardRemove())
     bot.send_message(
         message.chat.id,
         str(
             _(
-                "Bu yerga Shifoxona yoki servis xizmat turlari haqida qisqacha ma`lumot yozilishi mumkin"
+                "Бу ерга Шифохона ёки сервис хизмат турлари ҳақида қисқача маълумот ёзилиши мумкин"
             )
         ),
         reply_markup=markup,
@@ -659,7 +650,7 @@ def echo_all(message):
         )
         bot.send_message(
             message.chat.id,
-            str(_("Telefon raqamingizni kiriting:")),
+            str(_("Телефон рақамингизни киритинг:")),
             reply_markup=markup,
         )
 
@@ -676,7 +667,7 @@ def echo_all(message):
         )
         markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
         btn = types.KeyboardButton(str(_("✅ Тасдиқлаш")))
-        btn1 = types.KeyboardButton(str(_("Shikoyat matni o'zgartirish")))
+        btn1 = types.KeyboardButton(str(_("Шикоят матни ўзгартириш")))
         btn2 = types.KeyboardButton(str(_("🛑 Бекор қилиш")))
         bot_user.step = 100
         markup.add(btn, btn1, btn2)
@@ -706,11 +697,11 @@ def contact(message):
             markup.add(btn1)
         markup.add(btn, btn2, btn3)
         bot.send_message(
-            message.chat.id, str(_(f"Telefon raqam qabul qilindi: {phone_number}"))
+            message.chat.id, str(_(f"Телефон рақам қабул қилинди: {phone_number}"))
         )
         bot.send_message(
             message.chat.id,
-            str(_("Рўйҳатдан ўтиш muvaffaqqiyatli yakunlandi!")),
+            str(_("Рўйҳатдан ўтиш муваффаққиятли якунланди!")),
             reply_markup=markup,
         )
 
@@ -729,7 +720,7 @@ def back(call):
         btn4 = types.KeyboardButton(str(_("📋 Қабулни кўриш")))
         markup.add(btn4)
     markup.add(btn3)
-    bot.send_message(call.from_user.id, "<b>Bosh menu</b>", reply_markup=markup)
+    bot.send_message(call.from_user.id, "<b>Бош меню</b>", reply_markup=markup)
 
 
 def send_process(message):
@@ -739,7 +730,7 @@ def send_process(message):
         btn = types.KeyboardButton("Button")
         markup.add(btn)
         bot.send_message(
-            message.from_user.id, "Habar yuborish bekor qilindi!", reply_markup=markup
+            message.from_user.id, "Ҳабар юбориш бекор қилинди!", reply_markup=markup
         )
     else:
         letter = Letter.objects.filter(admin_id=ADMIN, active=True).last()
@@ -768,15 +759,15 @@ def send_process(message):
             total = letter.count
             bot.send_message(
                 int(ADMIN),
-                f"<b><u>Habar yuborishda yakunlandi:</u></b>\n<b>Jami foydalanuvchilar soni:</b> {us}\n<b>Muvafaqqiyatli yuborilgan habar soni:</b> {total}\n<b>Muvafaqqiyatsiz yuborilgan habar soni:</b> {us - total}",
+                f"<b><u>Ҳабар юборишда якунланди:</u></b>\n<b>Жами фойдаланувчилар сони:</b> {us}\n<b>Мувафаққиятли юборилган ҳабар сони:</b> {total}\n<b>Мувафаққияциз юборилган ҳабар сони:</b> {us - total}",
                 reply_markup=markup,
             )
             letter.active = False
             letter.save()
             response = HttpResponse()
-            response.write("<h1>Habar yuborilishi muvofaqqiyatli yakunlandi!</h1>")
+            response.write("<h1>Ҳабар юборилиши мувофаққиятли якунланди!</h1>")
             return response
 
         response = HttpResponse()
-        response.write("<h1>Habar yuborilmoqda!</h1>")
+        response.write("<h1>Ҳабар юборилмоқда!</h1>")
         return response
