@@ -1,5 +1,7 @@
 from calendar import monthrange
+
 import telebot.types as types
+
 from telegram_bot_calendar.base import *
 
 STEPS = {YEAR: MONTH, MONTH: DAY}

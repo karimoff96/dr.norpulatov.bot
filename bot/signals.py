@@ -1,8 +1,9 @@
 import requests
-from environs import Env
-from .models import Patient, Appointment
-from telebot.apihelper import ApiTelegramException
 from django.shortcuts import HttpResponse
+from environs import Env
+from telebot.apihelper import ApiTelegramException
+
+from .models import Appointment, Patient
 
 env = Env()
 env.read_env()

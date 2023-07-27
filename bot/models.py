@@ -1,7 +1,8 @@
-from django.db import models
-import segno
-from django.utils.html import mark_safe
 import uuid
+
+import segno
+from django.db import models
+from django.utils.html import mark_safe
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 

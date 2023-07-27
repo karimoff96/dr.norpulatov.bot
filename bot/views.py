@@ -1,15 +1,17 @@
+import datetime
+
 import telebot
 from django.shortcuts import HttpResponse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from environs import Env
 from telebot import types
-from .models import Appointment, Doctor, Patient, Letter, Specialization
 from telebot.apihelper import ApiTelegramException
-import datetime
-from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
-
 from telebot.types import CallbackQuery
+
+from telegram_bot_calendar import LSTEP, DetailedTelegramCalendar
+
+from .models import Appointment, Doctor, Letter, Patient, Specialization
 
 env = Env()
 env.read_env()
@@ -573,6 +575,7 @@ def show_available_times(user_id, chat_id, message_id):
     current_time = (datetime.datetime.now() + datetime.timedelta(hours=5)).strftime(
         "%H:%M"
     )
+    print(current_time)
     booked_times = [time.strftime("%H:%M") for time in app]
     available_times = [time for time in available_times if time not in booked_times]
     if selected_date == datetime.datetime.now().date():

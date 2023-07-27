@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group
 
-from .models import Appointment, Doctor, Patient, Letter, Specialization
+from .models import Appointment, Doctor, Letter, Patient, Specialization
 
 # Register your models here.
 admin.site.unregister(Group)
@@ -55,6 +55,7 @@ admin.site.register(Doctor, DoctorAdmin)
 
 
 from django.contrib import admin
+
 from .models import Appointment
 
 
