@@ -5,6 +5,7 @@ import uuid
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
+
 class Specialization(models.Model):
     name = models.CharField(max_length=128, unique=True)
     description = models.TextField(blank=True)
@@ -17,6 +18,10 @@ class Specialization(models.Model):
         verbose_name_plural = "Faoliyat turlari"
         indexes = [models.Index(fields=["name"])]
 
+def get_doc_token():
+    return str(uuid.uuid4())
+
+
 class Doctor(TimeStampedModel, models.Model):
     doc_id = models.BigIntegerField(unique=True, blank=True, null=True)
     first_name = models.CharField(max_length=128, blank=True)
@@ -28,7 +33,7 @@ class Doctor(TimeStampedModel, models.Model):
     specialization = models.ManyToManyField(Specialization, related_name="doctor")
     image = models.ImageField(upload_to="doctor")
     qrcode = models.CharField(max_length=100, blank=True)
-    doc_token = models.CharField(max_length=256, default=str(uuid.uuid4()))
+    doc_token = models.CharField(max_length=256, default=get_doc_token)
     show_img_preview = models.BooleanField(default=True)
 
     def img_preview(self):
@@ -98,8 +103,8 @@ class Appointment(TimeStampedModel, models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.SET_NULL, null=True)
     name = models.CharField(max_length=256, blank=True)
     phone_number = models.CharField(max_length=13, blank=True)
-    app_date = models.DateField()
-    app_time = models.TimeField()
+    app_date = models.DateField(null=True, blank=True)
+    app_time = models.TimeField(null=True, blank=True)
     type = models.CharField(choices=TYPES, default="web", max_length=15)
     complaint = models.TextField(
         blank=True, verbose_name=_("Shikoyat, qo'shimcha ma'lumot")
@@ -108,7 +113,11 @@ class Appointment(TimeStampedModel, models.Model):
     urgent = models.BooleanField(default=False)
 
     def __str__(self) -> str:
-        return f"{self.doctor.first_name}-{self.name}-{self.app_date}"
+        if self.urgent==False:
+            return f"{self.doctor.first_name}-{self.name}-{self.app_date}" or f"{self.name}-{self.app_date}"
+        else:
+            return f"{self.name}-{self.app_date}" 
+
 
     class Meta:
         verbose_name = "Shifokor ko'rigi"

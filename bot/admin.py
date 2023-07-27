@@ -70,6 +70,7 @@ class AppointmentAdmin(admin.ModelAdmin):
         "modified",
         "complaint",
         "active",
+        "urgent"
     )
     list_display_links = ("doctor", "patient", "name")
 

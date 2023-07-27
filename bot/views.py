@@ -60,10 +60,17 @@ def start(message):
                     markup = types.ReplyKeyboardMarkup(
                         row_width=2, resize_keyboard=True
                     )
-                    btn = types.KeyboardButton(str(_("🧾 Қабулга ёзилиш")))
-                    btn1 = types.KeyboardButton(str(_("🚨 Тезкор Алоқа")))
-                    btn2 = types.KeyboardButton(str(_("👤 Профиль")))
-                    markup.add(btn, btn1, btn2)
+                    btn = types.KeyboardButton("🧾 Қабулга ёзилиш")
+                    btn2 = types.KeyboardButton("🚨 Тезкор Алоқа")
+                    btn1 = types.KeyboardButton("👤 Профиль")
+                    apps = Appointment.objects.filter(
+                        patient__user_id=message.from_user.id, active=True
+                    )
+                    if len(apps) > 0:
+                        btn4 = types.KeyboardButton("📋 Қабулни кўриш")
+                        markup.add(btn4).add(btn, btn2).add(btn1)
+                    else:
+                        markup.add(btn, btn2).add(btn1)
                     bot.send_message(
                         message.chat.id,
                         str(_("<b>Шифокор қабулига ёзилиш</b>")),
@@ -238,11 +245,14 @@ def checkout(message):
     bot_user = Patient.objects.get(user_id=message.from_user.id)
     apps = Appointment.objects.filter(patient=bot_user)
     for app in apps:
-        text = str(
-            _(
-                f"""<b>✅ Тартиб рақами:</b>  <i>№{app.id}</i>\n<b>🙍‍♂️ Беъмор:</b> <i>{app.patient.first_name} {app.patient.last_name}</i>\n<b>📞 Телефон рақам:</b> <i>{app.patient.phone_number}</i>\n<b>👨‍⚕️ Масъул шифокор:</b> <i>{app.doctor}</i>\n<b>📅 Қабул куни:</b> <i>{app.app_date}</i>\n<b>🕔 Қабул соати:</> <i>{app.app_time.strftime('%H:%M')}</i>\n<b>🔰 Яратилган вақти:</b> <i>{(app.created+datetime.timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")}</i>"""
+        if app.urgent == True:
+            text = f"""<b>‼️Тезкор Алоқа✅ Тартиб рақами:</b>  <i>№{app.id}</i>\n<b>🙍‍♂️ Беъмор:</b> <i>{app.patient.first_name} {app.patient.last_name}</i>\n<b>📞 Телефон рақам:</b> <i>{app.patient.phone_number}</i>\ \n<b>🔰 Яратилган вақти:</b> <i>{(app.created+datetime.timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")}</i>"""
+        else:
+            text = str(
+                _(
+                    f"""<b>✅ Тартиб рақами:</b>  <i>№{app.id}</i>\n<b>🙍‍♂️ Беъмор:</b> <i>{app.patient.first_name} {app.patient.last_name}</i>\n<b>📞 Телефон рақам:</b> <i>{app.patient.phone_number}</i>\n<b>👨‍⚕️ Масъул шифокор:</b> <i>{app.doctor}</i>\n<b>📅 Қабул куни:</b> <i>{app.app_date}</i>\n<b>🕔 Қабул соати:</> <i>{app.app_time.strftime('%H:%M')}</i>\n<b>🔰 Яратилган вақти:</b> <i>{(app.created+datetime.timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")}</i>"""
+                )
             )
-        )
         markup = types.InlineKeyboardMarkup(row_width=2)
         button_text = "❌ Ўчириш"
         button_callback = f"delete|{app.id}"
@@ -323,14 +333,15 @@ def cont(message):
     markup.add(btn, btn1, btn2)
     text = str(
         _(
-            f"<b>Tezkor ko`rik uchun ariza topshiruvchi be`mor ma`lumotlari:\nIsmi: </b><i>{bot_user.first_name}</i>\n<b>Familyasi:</b> <i>{bot_user.last_name}</i>\n<b>Telefon raqami:</b> <i>{bot_user.phone_number}</i>\n<b>Shikoyati:</b> <i>Тезкор Алоқа!\n\nBarcha ma`lumotlaringiz to`gri bo`lsa ✅ Тасдиқлаш tugmasini bosing!\nP.S: Shikoyat matnini kiritish ixtiyori!</i>"
+            f"<b>Тезкор кўрик учун ариза топширувчи беъмор маълумотлари:\nИсми: </b><i>{bot_user.first_name}</i>\n<b>Фамилияси:</b> <i>{bot_user.last_name}</i>\n<b>Телефон рақами:</b> <i>{bot_user.phone_number}</i>\n<b>Шикояти:</b> <i>Тезкор Алоқа!\n\nБарча маълумотларингиз тўгри бўлса ✅ Тасдиқлаш тугмасини босинг!\nP.S: Шикоят матнини киритиш ихтиёри!</i>"
         )
     )
     bot.send_message(message.from_user.id, text, reply_markup=markup)
 
 
 @bot.message_handler(
-    func=lambda message: message.text == str(_("🔖 Шикоят матни киритиш"))
+    func=lambda message: message.text == str(_("✏️ Шикоят матнини ўзгартириш"))
+    or message.text == str(_("🔖 Шикоят матни киритиш"))
 )
 def make_complaint(message):
     global extra_datas
@@ -348,54 +359,41 @@ def make_complaint(message):
     )
 
 
-@bot.message_handler(
-    func=lambda message: message.text == str(_("✏️ Шикоят матнини ўзгартириш"))
-)
-def change_complaint(message):
-    global extra_datas
-    bot_user = Patient.objects.get(user_id=message.from_user.id)
-    print(extra_datas)
-    extra_datas[message.from_user.id]["complaint"] = message.text
-    print(extra_datas)
-    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    btn = types.KeyboardButton(str(_("✅ Тасдиқлаш")))
-    btn1 = types.KeyboardButton(str(_("✏️ Шикоят матнини ўзгартириш")))
-    btn2 = types.KeyboardButton(str(_("🛑 Бекор қилиш")))
-    markup.add(btn, btn1, btn2)
-    text = str(
-        _(
-            f"<b>Тезкор кўрик учун ариза топширувчи беъмор маълумотлари:\nИсми: </b><i>{bot_user.first_name}<i>\n<b>Фамилияси: </b><i>{bot_user.last_name}</i>\n<b>Телефон рақами:</b> <i>{bot_user.phone_number}</i>\n<b>Қўшимча маълумот:</b><i>Тезкор Алоқа!{message.text}</i>\n\n<i><b>Барча маълумотларингиз тўгри бўлса ✅ 'Тасдиқлаш' тугмасини босинг!</b></i>"
-        )
-    )
-    bot.send_message(message.chat.id, text, reply_markup=markup)
-    print(1)
-
-
 @bot.message_handler(func=lambda message: message.text == str(_("✅ Тасдиқлаш")))
 def confirm(message):
     global extra_datas
-    patient = Patient.objects.filter(user_id=message.from_user.id)[0]
+    patient = Patient.objects.get(user_id=message.from_user.id)
     complaint = (
         extra_datas[message.from_user.id]["complaint"]
         if "complaint" in extra_datas
         else ""
     )
     app = Appointment.objects.create(
-        patient=patient, complaint=complaint, urgent=True, active=True, type="bot"
+        patient=patient,
+        complaint=complaint,
+        name=patient.first_name,
+        phone_number=patient.phone_number,
+        # app_time=datetime.datetime.now().time().strftime("%H:%m"),
+        # app_date=datetime.datetime.now().today().strftime("%Y-%m-%d"),
+        urgent=True,
+        active=True,
+        type="bot",
     )
     apps = Appointment.objects.filter(patient=patient)
     markup = types.ReplyKeyboardMarkup(
         row_width=2, resize_keyboard=True, one_time_keyboard=True
     )
-    btn = types.KeyboardButton(str(_("🧾 Қабулга ёзилиш")))
-    btn1 = types.KeyboardButton(str(_("🚨 Тезкор Алоқа")))
-    btn3 = types.KeyboardButton(str(_("👤 Профиль")))
-    markup.add(btn, btn1)
-
-    if len(app) > 0:
-        btn4 = types.KeyboardButton(str(_("📋 Қабулни кўриш")))
-        markup.add(btn4)
-    markup.add(btn3)
+    btn = types.KeyboardButton("🧾 Қабулга ёзилиш")
+    btn2 = types.KeyboardButton("🚨 Тезкор Алоқа")
+    btn1 = types.KeyboardButton("👤 Профиль")
+    apps = Appointment.objects.filter(
+        patient__user_id=message.from_user.id, active=True
+    )
+    if len(apps) > 0:
+        btn4 = types.KeyboardButton("📋 Қабулни кўриш")
+        markup.add(btn4).add(btn, btn2).add(btn1)
+    else:
+        markup.add(btn, btn2).add(btn1)
     bot.send_message(
         message.chat.id,
         str(
@@ -631,9 +629,7 @@ def call_data(call: CallbackQuery):
     btn = types.KeyboardButton("🧾 Қабулга ёзилиш")
     btn2 = types.KeyboardButton("🚨 Тезкор Алоқа")
     btn1 = types.KeyboardButton("👤 Профиль")
-    if Appointment.objects.filter(
-        patient__user_id=call.from_user.id, active=True
-    ):
+    if Appointment.objects.filter(patient__user_id=call.from_user.id, active=True):
         btn4 = types.KeyboardButton("📋 Қабулни кўриш")
         markup.add(btn4).add(btn, btn2).add(btn1)
     else:
@@ -649,7 +645,7 @@ def echo_all(message):
         bot_user.first_name = message.text
         bot_user.step = 2
         bot_user.save()
-        bot.send_message(message.chat.id, str(_("Фамилянгизни киритинг:")))
+        bot.send_message(message.chat.id, str(_("Фамилиянгизни киритинг:")))
 
     elif len(message.text) > 0 and bot_user.step == 2:
         bot_user.last_name = message.text
@@ -673,7 +669,7 @@ def echo_all(message):
         bot_user.save()
         text = str(
             _(
-                f"Tezkor ko`rik uchun ariza topshiruvchi be`mor ma`lumotlari:\nIsmi: {bot_user.first_name}\nFamilyasi: {bot_user.last_name}\nTelefon raqami: {bot_user.phone_number}\nQo`shimcha ma`lumot: Тезкор Алоқа! {message.text}"
+                f"Тезкор кўрик учун ариза топширувчи беъмор маълумотлари:\nИсми: {bot_user.first_name}\nФамилияси: {bot_user.last_name}\nТелефон рақами: {bot_user.phone_number}\nҚўшимча маълумот: Тезкор Алоқа! {message.text}"
             )
         )
         markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
@@ -681,6 +677,7 @@ def echo_all(message):
         btn1 = types.KeyboardButton(str(_("✏️ Шикоят матнини ўзгартириш")))
         btn2 = types.KeyboardButton(str(_("🛑 Бекор қилиш")))
         bot_user.step = 100
+        bot_user.save()
         markup.add(btn, btn1, btn2)
         bot.send_message(message.from_user.id, text, reply_markup=markup)
 
@@ -808,7 +805,7 @@ def send_process(message):
         letter.save()
         if letter.current >= len(Patient.objects.all()):
             markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-            btn = types.KeyboardButton("Button")
+            btn = types.KeyboardButton("⬅️ Ортга")
             markup.add(btn)
             us = len(Patient.objects.all())
             total = letter.count
