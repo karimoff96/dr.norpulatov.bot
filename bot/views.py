@@ -465,7 +465,7 @@ def handle_callback_query(call):
     doctors = Doctor.objects.filter(specialization__id=field_id)
     for doctor in doctors:
         button = types.InlineKeyboardButton(
-            doctor.first_name, callback_data=f"doc|{doctor.id}"
+            f"{doctor.first_name} {doctor.last_name}", callback_data=f"doc|{doctor.id}"
         )
         row_buttons.append(button)
         if len(row_buttons) == 2:
