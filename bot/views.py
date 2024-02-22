@@ -571,12 +571,7 @@ def show_available_times(user_id, chat_id, message_id):
         .values_list("app_time", flat=True)
         .distinct()
     )
-
-    # current_time = (datetime.datetime.now() + datetime.timedelta(hours=5)).strftime(
-    #     "%H:%M"
-    # )
     current_time = datetime.datetime.now().strftime("%H:%M")
-    print(current_time)
     booked_times = [time.strftime("%H:%M") for time in app]
     available_times = [time for time in available_times if time not in booked_times]
     if selected_date == datetime.datetime.now().date():
